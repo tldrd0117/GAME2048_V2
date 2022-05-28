@@ -1,0 +1,14 @@
+load...
+0
+[<Direction.LEFT: 0>, <Direction.UP: 2>, <Direction.RIGHT: 1>, <Direction.DOWN: 3>]
+nodeNone
+end
+table:
+[0, 0, 0, 0]
+[0, 4, 0, 0]
+[0, 0, 0, 2]
+[0, 0, 0, 0]
+save...
+7163
+saveComplete
+main
