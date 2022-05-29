@@ -35,12 +35,12 @@ class TensorModelRepository(object):
     nodes = {}
     predictedQValue = []
     losses = []
-    memory: Deque = deque([])
+    memory: Deque = deque(maxlen=500000)
     def __init__(self) -> None:
         disable_eager_execution()
         self.state_size = (4,4,1,)
         self.action_size = 4
-        self.batch_size = 1024
+        self.batch_size = 4096
         self.discount_factor = 0.99
 
         self.epsilon = 1.
@@ -102,9 +102,10 @@ class TensorModelRepository(object):
     def buildModel(self):
         model = Sequential()
         model.add(Conv2D(32, (2, 2), padding='same', strides=(1, 1), activation='relu', input_shape=self.state_size))
-        model.add(Conv2D(32, (2, 2), padding='same', strides=(1, 1), activation='relu'))
+        model.add(Conv2D(64, (2, 2), padding='same', strides=(1, 1), activation='relu'))
+        model.add(Conv2D(64, (2, 2), padding='same', strides=(1, 1), activation='relu'))
         model.add(Flatten())
-        model.add(Dense(256, activation='relu'))
+        model.add(Dense(512, activation='relu'))
         model.add(Dense(128, activation='relu'))
         model.add(Dense(4))
         model.summary()
@@ -122,12 +123,12 @@ class TensorModelRepository(object):
         a_one_hot = K.one_hot(a, self.action_size)
         q_value = K.sum(prediction * a_one_hot, axis=1)
         error = K.abs(y - q_value)
-
+        
         quadratic_part = K.clip(error, 0.0, 1.0)
         linear_part = error - quadratic_part
         loss = K.mean(0.5 * K.square(quadratic_part) + linear_part)
 
-        rms = RMSprop(lr=0.001, epsilon=1e-7)
+        rms = RMSprop(lr=0.00001, epsilon=0.01)
         updates = rms.get_updates(loss, self.model.trainable_weights)
         train = K.function([self.model.input, a, y], [loss], updates=updates)
 

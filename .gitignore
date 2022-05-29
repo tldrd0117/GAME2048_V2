@@ -1,1 +1,6 @@
 app/data/*
+database
+.env
+pyproject.toml
+poetry.lock
+__pycache__

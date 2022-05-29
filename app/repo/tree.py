@@ -4,6 +4,7 @@ from genericpath import exists
 from typing import Any, Dict, List
 import pickle
 import gc
+from datasource.mongo import MongoDataSource
 
 class TableNode:
     table: List
@@ -78,4 +79,33 @@ class TreeRepository(object):
     def printNodes(self):
         for node in self.nodes:
             self.nodes[node].print()
+
+
+class TreeDbRepository(object):
+    def __init__(self) -> None:
+        self.datasource = MongoDataSource()
+
+    def updateNodes(self, node: TableNode):
+        self.datasource.updateNodes(node)
+
+    def getNode(self, table: List):
+        result = self.datasource.getNode(str(table))
+        if result is not None:
+            return result
+        else:
+            node = TableNode()
+            node.table = table
+            node.childs = []
+            node.scores = []
+            return node
+    
+    def getCopyTree(self):
+        return {key: value[:] for key, value in self.nodes.items()}
+
+    def getExistNode(self, table: str):
+        return self.datasource.getNode(str(table))
+    
+    def addGameInfo(self, turn, score):
+        self.datasource.addGameInfo(turn, score)
+    
     

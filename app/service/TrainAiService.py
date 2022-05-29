@@ -5,6 +5,7 @@ from repo.table import TableRepository
 from repo.tree import TableNode
 import random
 import numpy as np
+import sys
 
 class TensorAiService(object):
     def __init__(self) -> None:
@@ -37,6 +38,7 @@ class TensorAiService(object):
 
             self.gameRepo.printGame()
             self.tableRepo.printTable()
+            sys.stdout.flush()
         print("end")
         self.tableRepo.printTable()
         self.tensorModelRepo.saveModel()

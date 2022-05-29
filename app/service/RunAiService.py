@@ -1,18 +1,16 @@
-import random
 from typing import List
-from repo.tree import TableNode
-from repo.table import TableRepository
+from repo.tensor import TensorModelRepository
 from repo.game import GameRepository
-from repo.tree import TreeRepository, TreeDbRepository
-import math
+from repo.table import TableRepository
+from repo.tree import TableNode
+import random
+import numpy as np
 
-class MCTSAiService(object):
+class RunAiService(object):
     def __init__(self) -> None:
         self.tableRepo = TableRepository()
         self.gameRepo = GameRepository()
-        self.treeRepo = TreeDbRepository()
-        # self.treeRepo = TreeRepository(idx)
-    
+        self.tensorModelRepo = TensorModelRepository()
 
     def run(self):
         self.gameRepo.initGame()
@@ -23,9 +21,8 @@ class MCTSAiService(object):
                 break
             for _ in range(10):
                 self.simulate()
-            action = self.selection(self.tableRepo.table)
+            action = self.selection(self.tableRepo.table, dirList, True)
             if action == -1:
-                print("action None")
                 break
             print(f"action: {str(action)}")
             data = self.tableRepo.moveTable(action)
@@ -37,6 +34,8 @@ class MCTSAiService(object):
             self.tableRepo.printTable()
         print("end")
         self.tableRepo.printTable()
+        unique, count = np.unique(np.array(self.tensorModelRepo.predictedQValue), return_counts=True)
+        print(dict(zip(unique, count)))
     
 
     def simulate(self):
@@ -45,24 +44,20 @@ class MCTSAiService(object):
         tableRepo.table = self.tableRepo.getCopyTable()
         gameRepo.turn = self.gameRepo.turn
         gameRepo.score = self.gameRepo.score
+        rootScore = self.gameRepo.score
         while True:
-            node = self.treeRepo.getNode(tableRepo.getCopyTable())
+            node = self.tensorModelRepo.getNode(tableRepo.getCopyTable())
+            node.rootScore = rootScore
             dirList = tableRepo.getPossibleDirList()
             if len(dirList) <= 0:
                 break
-            val = random.randrange(0,2)
-            if val == 0:
+            action = self.selection(tableRepo.getCopyTable(), dirList)
+            if action == -1:
                 idx = random.randrange(0,len(dirList))
                 data = tableRepo.moveTable(dirList[idx])
                 action = dirList[idx]
             else:
-                action = self.selection(tableRepo.getCopyTable())
-                if action == -1:
-                    idx = random.randrange(0,len(dirList))
-                    data = tableRepo.moveTable(dirList[idx])
-                    action = dirList[idx]
-                else:
-                    data = tableRepo.moveTable(action)
+                data = tableRepo.moveTable(action)
             
             if not data[0]:
                 print(tableRepo.table)
@@ -74,50 +69,61 @@ class MCTSAiService(object):
             gameRepo.nextTurn(data[1])
             tableRepo.genRandom()
 
-            childNode = self.treeRepo.getNode(tableRepo.getCopyTable())
+            childNode = self.tensorModelRepo.getNode(tableRepo.getCopyTable())
             childNode.action = action
+            childNode.rootScore = rootScore
             isDup = False
             for d in node.childs:
-                if str(childNode.table) == d[0]:
+                if str(childNode.table) == str(d[0]):
                     isDup = True
             if not isDup:
-                node.childs.append([str(childNode.table), action])
-            childNode.parent = str(node.table)
-            self.treeRepo.updateNodes(node)
-            self.treeRepo.updateNodes(childNode)
+                node.childs.append([childNode.table, action])
+            childNode.parent = node.table
+            self.tensorModelRepo.updateNodes(node)
+            self.tensorModelRepo.updateNodes(childNode)
         self.backPropagation(tableRepo.table, gameRepo.score)
 
-
-    def selection(self, table: List):
-        current: TableNode = self.treeRepo.getExistNode(str(table))
+    
+    def selection(self, table: List, dirList, isPrint=False):
+        current: TableNode = self.tensorModelRepo.getExistNode(str(table))
         if current == None:
             print("nodeNone")
             return -1
         maxUCT = 0
-        nextChildAction = -1
+        nextChildQValue = -1
         if len(current.childs) <= 0:
             return -1
         for childData in current.childs:
             childKey = childData[0]
-            child: TableNode = self.treeRepo.getExistNode(childKey)
+            child: TableNode = self.tensorModelRepo.getExistNode(str(childKey))
             if len(child.scores) <= 0:
                 continue
-            UCT = sum(child.scores) / len(child.scores) #+ math.sqrt(2) * math.sqrt(math.log(current.visit) / child.visit)
+            qValue = self.tensorModelRepo.getActionPredicted(child.table)[0]
+            UCT = np.max(qValue)
             if maxUCT < UCT:
                 maxUCT = UCT
-                nextChildAction = childData[1]
-        # print(f"maxUCT: {maxUCT}")
-        return nextChildAction
+                nextChildQValue = qValue       # print(f"maxUCT: {maxUCT}")
+        action = -1
+        if isPrint:
+            print(np.argmax(np.argsort(-nextChildQValue)))
+        sortValue = list(np.argsort(-nextChildQValue))
+        for i in reversed(range(0,4)):
+            a = sortValue.index(i)
+            if a in dirList:
+                action = a
+                break
+        return action
 
 
     def backPropagation(self, table: List, score: int):
-        node: TableNode = self.treeRepo.getExistNode(str(table))
+        nodeList = []
+        node: TableNode = self.tensorModelRepo.getExistNode(str(table))
         while True:
+            nodeList.append(node)
             node.visit = node.visit + 1
             node.scores.append(score)
-            self.treeRepo.updateNodes(node)
             if node.parent is None:
                 break
-            node = self.treeRepo.getExistNode(node.parent)
+            node = self.tensorModelRepo.getExistNode(str(node.parent))
 
 

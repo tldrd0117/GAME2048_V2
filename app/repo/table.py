@@ -2,6 +2,7 @@ from enum import IntEnum
 import random
 from typing import List
 import itertools
+import os
 
 class Direction(IntEnum):
     LEFT=0
@@ -24,6 +25,7 @@ class TableRepository(object):
         return self.copyTable(self.table)
 
     def printTable(self):
+        print(f"pid: {str(os.getpid())}")
         print("table:")
         for row in range(0,4):
             print(self.table[row])

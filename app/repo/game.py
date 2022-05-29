@@ -1,3 +1,4 @@
+import os
 
 class GameRepository(object):
     turn = 0
@@ -14,5 +15,7 @@ class GameRepository(object):
         self.score = self.score + score
     
     def printGame(self):
+        print(f"pid: {str(os.getpid())}")
         print(f"turn : {self.turn}")
         print(f"score : {self.score}")
+        
