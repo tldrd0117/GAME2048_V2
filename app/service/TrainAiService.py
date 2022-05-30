@@ -2,16 +2,18 @@ from typing import List
 from repo.tensor import TensorModelRepository
 from repo.game import GameRepository
 from repo.table import TableRepository
-from repo.tree import TableNode
+from repo.tree import TableNode, TreeDbRepository
+
 import random
 import numpy as np
 import sys
 
-class TensorAiService(object):
+class TrainAiService(object):
     def __init__(self) -> None:
         self.tableRepo = TableRepository()
         self.gameRepo = GameRepository()
         self.tensorModelRepo = TensorModelRepository()
+        self.treeRepo = TreeDbRepository()
 
     def run(self):
         self.gameRepo.initGame()
@@ -42,6 +44,7 @@ class TensorAiService(object):
         print("end")
         self.tableRepo.printTable()
         self.tensorModelRepo.saveModel()
+        self.treeRepo.addGameInfo(self.gameRepo.turn, self.gameRepo.score, "TrainAiService")
         unique, count = np.unique(np.array(self.tensorModelRepo.predictedQValue), return_counts=True)
         print(dict(zip(unique, count)))
     

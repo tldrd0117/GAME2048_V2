@@ -37,6 +37,7 @@ class MCTSAiService(object):
             self.tableRepo.printTable()
         print("end")
         self.tableRepo.printTable()
+        self.treeRepo.addGameInfo(self.gameRepo.turn, self.gameRepo.score, "MCTSAiService")
     
 
     def simulate(self):
