@@ -18,8 +18,8 @@ class TableRepository(object):
 
     def initTable(self):
         self.table = [[0,0,0,0], [0,0,0,0], [0,0,0,0], [0,0,0,0]]
-        self.genRandom()
-        self.genRandom()
+        self.genRandom(True)
+        self.genRandom(True)
     
     def getCopyTable(self):
         return self.copyTable(self.table)
@@ -48,7 +48,7 @@ class TableRepository(object):
         return dir
     
 
-    def genRandom(self):
+    def genRandom(self, isFirst = False):
         zeroCoord = []
         for row in range(0,4):
             for col in range(0,4):
@@ -57,8 +57,11 @@ class TableRepository(object):
         if len(zeroCoord) > 0:
             ran = random.randrange(0, len(zeroCoord))
             coord = zeroCoord[ran]
-            num = random.randrange(0,11)
-            self.table[coord[0]][coord[1]] = 2 if num < 10 else 4
+            if isFirst:
+                self.table[coord[0]][coord[1]] = 2
+            else:
+                num = random.randrange(0,11)
+                self.table[coord[0]][coord[1]] = 2 if num < 10 else 4
     
     def copyTable(self, table: List):
         return [item[:] for item in table]

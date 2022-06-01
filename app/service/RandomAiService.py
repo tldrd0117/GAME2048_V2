@@ -16,8 +16,8 @@ class RandomAiService(object):
                 break
             idx = random.randrange(0,len(dirList))
             print(f"move: {str(dirList[idx])}")
-            self.tableRepo.moveTable(dirList[idx])
-            self.gameRepo.nextTurn()
+            data = self.tableRepo.moveTable(dirList[idx])
+            self.gameRepo.nextTurn(data[1])
             self.tableRepo.genRandom()
             self.gameRepo.printGame()
             self.tableRepo.printTable()
