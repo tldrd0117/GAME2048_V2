@@ -178,7 +178,7 @@ class TensorModelRepository(object):
                 continue
             history = np.array(tableNode.parent).flatten().reshape(4,4,1)
             action = tableNode.action
-            reward = self.getReward(sum(tableNode.scores) / len(tableNode.scores) - tableNode.rootScore)
+            reward = 1 if tableNode.isScore else 0 
             nextHistory = np.array(tableNode.table).flatten().reshape(4,4,1)
             self.memory.append((history, int(action), reward, nextHistory))
 

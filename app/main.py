@@ -10,7 +10,7 @@ import time
 
 sys.setrecursionlimit(10000)
 def work():
-    ai = MCTSRunAiService()
+    ai = TrainAiService()
     ai.run()
 
 def main():

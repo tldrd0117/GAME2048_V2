@@ -1,5 +1,5 @@
 from typing import List
-from app.repo.tree import TreeDbRepository
+from repo.tree import TreeDbRepository
 from repo.tensor import TensorModelRepository
 from repo.game import GameRepository
 from repo.table import TableRepository

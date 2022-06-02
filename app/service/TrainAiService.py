@@ -33,7 +33,8 @@ class TrainAiService(object):
             self.tensorModelRepo.updateTargetModel()
             action = self.selection(self.tableRepo.table, dirList, True)
             if action == -1:
-                break
+                idx = random.randrange(0,len(dirList))
+                action = dirList[idx]
             print(f"action: {str(action)}")
             data = self.tableRepo.moveTable(action)
             
@@ -131,6 +132,8 @@ class TrainAiService(object):
         action = -1
         if isPrint:
             print(np.argmax(np.argsort(-nextChildQValue)))
+        if nextChildQValue == -1:
+            return action
         sortValue = list(np.argsort(-nextChildQValue))
         for i in reversed(range(0,4)):
             a = sortValue.index(i)
