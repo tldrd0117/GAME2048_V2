@@ -1,4 +1,5 @@
 from typing import List
+from app.repo.tree import TreeDbRepository
 from repo.tensor import TensorModelRepository
 from repo.game import GameRepository
 from repo.table import TableRepository
@@ -11,6 +12,7 @@ class RunAiService(object):
         self.tableRepo = TableRepository()
         self.gameRepo = GameRepository()
         self.tensorModelRepo = TensorModelRepository()
+        self.treeRepo = TreeDbRepository()
 
     def run(self):
         self.gameRepo.initGame()
@@ -72,6 +74,7 @@ class RunAiService(object):
             childNode = self.tensorModelRepo.getNode(tableRepo.getCopyTable())
             childNode.action = action
             childNode.rootScore = rootScore
+            childNode.isScore = data[1] > 0
             isDup = False
             for d in node.childs:
                 if str(childNode.table) == str(d[0]):

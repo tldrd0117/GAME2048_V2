@@ -20,6 +20,7 @@ class TableNode:
     scores: List = []
     parent: str = None
     rootScore: int = 0
+    isScore: bool = False
     childs: List[Dict[str,int]] = []
     def print(self):
         print("table")
@@ -161,7 +162,7 @@ class TensorModelRepository(object):
                     data = pickle.load(fr)
                     if data:
                         return data
-        return deque(maxlen=400000)
+        return deque(maxlen=500000)
     
 
     def getReward(self, reward):
@@ -182,7 +183,7 @@ class TensorModelRepository(object):
             self.memory.append((history, int(action), reward, nextHistory))
 
     def trainModel(self):
-        if len(self.memory) < self.batch_size:
+        if len(self.memory) < 50000:
             return
         if self.epsilon > self.epsilon_end:
             self.epsilon -= self.epsilon_decay_step

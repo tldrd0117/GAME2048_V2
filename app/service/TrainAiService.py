@@ -14,6 +14,8 @@ class TrainAiService(object):
         self.gameRepo = GameRepository()
         self.tensorModelRepo = TensorModelRepository()
         self.treeRepo = TreeDbRepository()
+        self.scores = []
+        self.turns = []
 
     def run(self):
         self.gameRepo.initGame()
@@ -44,7 +46,11 @@ class TrainAiService(object):
         print("end")
         self.tableRepo.printTable()
         self.tensorModelRepo.saveModel()
+
+        averageScores = sum(self.scores) / len(self.scores)
+        averageTurns = sum(self.turns ) / len(self.turns)
         self.treeRepo.addGameInfo(self.gameRepo.turn, self.gameRepo.score, "TrainAiService")
+        self.treeRepo.addGameInfo(averageTurns, averageScores, "TrainAiServiceAverage")
         unique, count = np.unique(np.array(self.tensorModelRepo.predictedQValue), return_counts=True)
         print(dict(zip(unique, count)))
     
@@ -99,6 +105,8 @@ class TrainAiService(object):
             self.tensorModelRepo.updateNodes(node)
             self.tensorModelRepo.updateNodes(childNode)
         self.backPropagation(tableRepo.table, gameRepo.score)
+        self.scores.append(gameRepo.score)
+        self.turns.append(gameRepo.turn)
 
     
     def selection(self, table: List, dirList, isPrint=False):
@@ -138,7 +146,7 @@ class TrainAiService(object):
         while True:
             nodeList.append(node)
             node.visit = node.visit + 1
-            node.scores.append(score)
+            # node.scores.append(score)
             if node.parent is None:
                 break
             node = self.tensorModelRepo.getExistNode(str(node.parent))
