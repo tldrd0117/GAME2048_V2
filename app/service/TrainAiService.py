@@ -1,3 +1,4 @@
+from multiprocessing import Lock
 from typing import List
 from repo.tensor import TensorModelRepository
 from repo.game import GameRepository
@@ -9,13 +10,16 @@ import numpy as np
 import sys
 
 class TrainAiService(object):
-    def __init__(self) -> None:
+    def __init__(self, lock) -> None:
+        self.lock = lock
+        self.lock.acquire()
         self.tableRepo = TableRepository()
         self.gameRepo = GameRepository()
         self.tensorModelRepo = TensorModelRepository()
         self.treeRepo = TreeDbRepository()
         self.scores = []
         self.turns = []
+        self.lock.release()
 
     def run(self):
         self.gameRepo.initGame()
@@ -155,6 +159,8 @@ class TrainAiService(object):
                 break
             node = self.tensorModelRepo.getExistNode(str(node.parent))
         self.tensorModelRepo.appendSamples(nodeList)
-        self.tensorModelRepo.trainModel()
+        self.lock.acquire()
+        self.tensorModelRepo.trainModelAndLock()
+        self.lock.release()
 
 

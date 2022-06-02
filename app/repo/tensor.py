@@ -12,6 +12,7 @@ import pickle
 from collections import deque
 import os
 from tensorflow.python.framework.ops import disable_eager_execution
+from filelock import FileLock
 
 class TableNode:
     table: List
@@ -41,7 +42,7 @@ class TensorModelRepository(object):
         disable_eager_execution()
         self.state_size = (4,4,1,)
         self.action_size = 4
-        self.batch_size = 4096
+        self.batch_size = 128
         self.discount_factor = 0.99
 
         self.epsilon = 1.
@@ -65,10 +66,8 @@ class TensorModelRepository(object):
         self.summary_writer = tf.compat.v1.summary.FileWriter(
             'app/data/summary', self.sess.graph)
         self.sess.run(tf.compat.v1.global_variables_initializer())
-        if exists("app/data/model/game2048_dqn.h5"):
-            self.model.load_weights("app/data/model/game2048_dqn.h5")
-            self.updateTargetModel()
-            print(self.model.get_weights())
+        self.loadModel()
+        print(self.model.get_weights())
     
 
     def updateNodes(self, node: TableNode):
@@ -96,9 +95,23 @@ class TensorModelRepository(object):
     def updateTargetModel(self):
         self.targetModel.set_weights(self.model.get_weights())
     
+    def loadModel(self):
+        # with FileLock("app/data/model/game2048_dqn.h5.lock", timeout=100):
+        if exists("app/data/model/game2048_dqn.h5"):
+            self.model.load_weights("app/data/model/game2048_dqn.h5")
+            self.updateTargetModel()
 
     def saveModel(self):
+        # with FileLock("app/data/model/game2048_dqn.h5.lock", timeout=100):
         self.model.save_weights("app/data/model/game2048_dqn.h5")
+    
+    def trainModelAndLock(self):
+        # with FileLock("app/data/model/game2048_dqn.h5.lock", timeout=600):
+        if exists("app/data/model/game2048_dqn.h5"):
+            self.model.load_weights("app/data/model/game2048_dqn.h5")
+        self.trainModel()
+        self.model.save_weights("app/data/model/game2048_dqn.h5")
+
 
     def buildModel(self):
         model = Sequential()

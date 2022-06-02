@@ -5,26 +5,26 @@ from service.MCTSRunAiService import MCTSRunAiService
 from service.TrainAiService import TrainAiService
 import sys
 import gc
-from multiprocessing import Process, freeze_support
+from multiprocessing import Lock, Process, freeze_support
 import time
 
 sys.setrecursionlimit(10000)
-def work():
-    ai = TrainAiService()
+def work(lock):
+    ai = TrainAiService(lock)
     ai.run()
 
 def main():
-    work()
-    # start = int(time.time())
-    # procs = []  
-    # for num in range(8):
-    #     proc = Process(target=work, args=())
-    #     procs.append(proc)
-    #     proc.start()
+    start = int(time.time())
+    procs = []
+    lock = Lock()
+    for num in range(8):
+        proc = Process(target=work, args=(lock,))
+        procs.append(proc)
+        proc.start()
 
-    # for proc in procs:
-    #     proc.join()
-    # print("***run time(sec) :", int(time.time()) - start)
+    for proc in procs:
+        proc.join()
+    print("***run time(sec) :", int(time.time()) - start)
 
 if __name__=='__main__':
     freeze_support()
