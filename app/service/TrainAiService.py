@@ -19,6 +19,7 @@ class TrainAiService(object):
 
     def run(self):
         self.gameRepo.initGame()
+        
         while True:
             dirList = self.tableRepo.getPossibleDirList()
             print(dirList)
