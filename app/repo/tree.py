@@ -12,6 +12,7 @@ class TableNode:
     visit: int = 0
     scores: List = []
     parent: str = None
+    isScore: bool = False
     childs: List[Dict[str,int]] = []
     def print(self):
         print("table")

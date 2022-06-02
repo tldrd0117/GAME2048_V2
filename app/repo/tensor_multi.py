@@ -34,7 +34,7 @@ class TableNode:
         print(f"parent: {self.parent}")
         print(f"childs: {str(self.childs)}")
 
-class TensorModelRepository(object):
+class TensorMultitModelRepository(object):
     nodes = {}
     predictedQValue = []
     losses = []
@@ -43,7 +43,7 @@ class TensorModelRepository(object):
         disable_eager_execution()
         self.state_size = (4,4,1,)
         self.action_size = 4
-        self.batch_size = 128
+        self.batch_size = 2048
         self.discount_factor = 0.99
 
         self.epsilon = 1.
@@ -54,7 +54,6 @@ class TensorModelRepository(object):
 
         self.model = self.buildModel()
         self.targetModel = self.buildModel()
-        self.updateTargetModel()
         self.optimizer = self.buildOptimizer()
 
         # 텐서보드 설정
@@ -67,8 +66,6 @@ class TensorModelRepository(object):
         self.summary_writer = tf.compat.v1.summary.FileWriter(
             'app/data/summary', self.sess.graph)
         self.sess.run(tf.compat.v1.global_variables_initializer())
-        self.loadModel()
-        print(self.model.get_weights())
     
 
     def updateNodes(self, node: TableNode):
@@ -92,40 +89,14 @@ class TensorModelRepository(object):
         if table in self.nodes:
             node = self.nodes[table]
         return node
-    
-    def updateTargetModel(self):
-        self.targetModel.set_weights(self.model.get_weights())
-    
-    def loadModel(self):
-        # with FileLock("app/data/model/game2048_dqn.h5.lock", timeout=100):
-        if exists("app/data/model/game2048_dqn.h5"):
-            try:
-                self.model.load_weights("app/data/model/game2048_dqn.h5")
-            except Exception:
-                print("error! before")
-                self.model.load_weights("app/data/model/game2048_dqn_before.h5")
-            self.updateTargetModel()
 
-    def saveModel(self):
-        # with FileLock("app/data/model/game2048_dqn.h5.lock", timeout=100):
-        self.model.save_weights("app/data/model/game2048_dqn.h5")
+    def updateMemory(self, memory):
+        self.memory = memory
     
-    def trainModelAndLock(self):
-        # with FileLock("app/data/model/game2048_dqn.h5.lock", timeout=600):
-        self.model.save_weights("app/data/model/game2048_dqn_before.h5")
-        weight = self.model.get_weights()
-        try:
-            if exists("app/data/model/game2048_dqn.h5"):
-                self.model.load_weights("app/data/model/game2048_dqn.h5")
-            self.trainModel()
-            self.model.save_weights("app/data/model/game2048_dqn.h5")
-        except Exception:
-            self.model.set_weights(weight)
-            self.model.save_weights("app/data/model/game2048_dqn.h5")
-        finally:
-            self.model.set_weights(weight)
-            self.model.save_weights("app/data/model/game2048_dqn.h5")
-
+    def updateTargetModel(self, weight):
+        self.model.set_weights(weight)
+        self.targetModel.set_weights(weight)
+        print(self.model.get_weights())
 
 
     def buildModel(self):
@@ -192,6 +163,15 @@ class TensorModelRepository(object):
                         return data
         return deque(maxlen=500000)
     
+    def loadModel(self):
+        # with FileLock("app/data/model/game2048_dqn.h5.lock", timeout=100):
+        if exists("app/data/model/game2048_dqn_multi.h5"):
+            self.model.load_weights("app/data/model/game2048_dqn_multi.h5")
+            self.updateTargetModel(self.model.get_weights())
+
+    def saveModel(self):
+        # with FileLock("app/data/model/game2048_dqn.h5.lock", timeout=100):
+        self.model.save_weights("app/data/model/game2048_dqn_multi.h5")
 
     def getReward(self, reward):
         if reward > 100:

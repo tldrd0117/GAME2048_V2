@@ -7,11 +7,13 @@ import sys
 import gc
 from multiprocessing import Lock, Process, freeze_support
 import time
+import signal
 
 sys.setrecursionlimit(10000)
 def work(lock):
     ai = TrainAiService(lock)
     ai.run()
+
 
 def main():
     start = int(time.time())
@@ -24,6 +26,7 @@ def main():
 
     for proc in procs:
         proc.join()
+
     print("***run time(sec) :", int(time.time()) - start)
 
 if __name__=='__main__':

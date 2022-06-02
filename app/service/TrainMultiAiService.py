@@ -1,6 +1,6 @@
 from multiprocessing import Lock
 from typing import List
-from repo.tensor import TensorModelRepository
+from repo.tensor_multi import TensorMultitModelRepository
 from repo.game import GameRepository
 from repo.table import TableRepository
 from repo.tree import TableNode, TreeDbRepository
@@ -9,17 +9,16 @@ import random
 import numpy as np
 import sys
 
-class TrainAiService(object):
-    def __init__(self, lock) -> None:
-        self.lock = lock
-        self.lock.acquire()
+class TrainMultiAiService(object):
+    def __init__(self, weight) -> None:
         self.tableRepo = TableRepository()
         self.gameRepo = GameRepository()
-        self.tensorModelRepo = TensorModelRepository()
         self.treeRepo = TreeDbRepository()
+        self.tensorModelRepo = TensorMultitModelRepository()
+        if weight is not None:
+            self.tensorModelRepo.updateTargetModel(weight)
         self.scores = []
         self.turns = []
-        self.lock.release()
 
     def run(self):
         self.gameRepo.initGame()
@@ -29,16 +28,11 @@ class TrainAiService(object):
             print(dirList)
             if len(dirList) <= 0:
                 break
-            for i in range(100):
-                print(f"simulate: {i}")
+            for i in range(10):
                 self.simulate()
-            losses = self.tensorModelRepo.losses
-            if len(losses) > 0:
-                print(sum(losses)/len(losses))
-            self.tensorModelRepo.losses = []
-            self.tensorModelRepo.updateTargetModel()
             action = self.selection(self.tableRepo.table, dirList, True)
             if action == -1:
+                print("-1")
                 idx = random.randrange(0,len(dirList))
                 action = dirList[idx]
             print(f"action: {str(action)}")
@@ -52,14 +46,15 @@ class TrainAiService(object):
             sys.stdout.flush()
         print("end")
         self.tableRepo.printTable()
-        self.tensorModelRepo.saveModel()
 
         averageScores = sum(self.scores) / len(self.scores)
         averageTurns = sum(self.turns ) / len(self.turns)
-        self.treeRepo.addGameInfo(self.gameRepo.turn, self.gameRepo.score, "TrainAiService")
-        self.treeRepo.addGameInfo(averageTurns, averageScores, "TrainAiServiceAverage")
+        self.treeRepo.addGameInfo(self.gameRepo.turn, self.gameRepo.score, "TrainMultiAiService")
+        self.treeRepo.addGameInfo(averageTurns, averageScores, "TrainMultiAiServiceAverage")
+        print(self.tensorModelRepo.predictedQValue)
         unique, count = np.unique(np.array(self.tensorModelRepo.predictedQValue), return_counts=True)
         print(dict(zip(unique, count)))
+        return self.tensorModelRepo.memory
     
 
     def simulate(self):
@@ -117,29 +112,10 @@ class TrainAiService(object):
 
     
     def selection(self, table: List, dirList, isPrint=False):
-        current: TableNode = self.tensorModelRepo.getExistNode(str(table))
-        if current == None:
-            print("nodeNone")
-            return -1
-        maxUCT = 0
-        nextChildQValue = -1
-        if len(current.childs) <= 0:
-            return -1
-        for childData in current.childs:
-            childKey = childData[0]
-            child: TableNode = self.tensorModelRepo.getExistNode(str(childKey))
-            if len(child.scores) <= 0:
-                continue
-            qValue = self.tensorModelRepo.getActionPredicted(child.table)[0]
-            UCT = np.max(qValue)
-            if maxUCT < UCT:
-                maxUCT = UCT
-                nextChildQValue = qValue       # print(f"maxUCT: {maxUCT}")
+        nextChildQValue = self.tensorModelRepo.getActionPredicted(table)[0]
         action = -1
         if isPrint:
             print(np.argmax(np.argsort(-nextChildQValue)))
-        if nextChildQValue == -1:
-            return action
         sortValue = list(np.argsort(-nextChildQValue))
         for i in reversed(range(0,4)):
             a = sortValue.index(i)
@@ -160,8 +136,3 @@ class TrainAiService(object):
                 break
             node = self.tensorModelRepo.getExistNode(str(node.parent))
         self.tensorModelRepo.appendSamples(nodeList)
-        self.lock.acquire()
-        self.tensorModelRepo.trainModelAndLock()
-        self.lock.release()
-
-
