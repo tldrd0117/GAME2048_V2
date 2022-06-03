@@ -19,7 +19,7 @@ def main():
     start = int(time.time())
     procs = []
     lock = Lock()
-    for num in range(8):
+    for num in range(1):
         proc = Process(target=work, args=(lock,))
         procs.append(proc)
         proc.start()

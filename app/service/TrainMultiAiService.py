@@ -19,8 +19,11 @@ class TrainMultiAiService(object):
             self.tensorModelRepo.updateTargetModel(weight)
         self.scores = []
         self.turns = []
+        self.maxQ = []
+        self.simulateMaxQ = []
 
     def run(self):
+        print("run")
         self.gameRepo.initGame()
         
         while True:
@@ -30,11 +33,13 @@ class TrainMultiAiService(object):
                 break
             for i in range(10):
                 self.simulate()
-            action = self.selection(self.tableRepo.table, dirList, True)
+            action, maxQ = self.selection(self.tableRepo.table, dirList, True)
             if action == -1:
                 print("-1")
                 idx = random.randrange(0,len(dirList))
                 action = dirList[idx]
+            else:
+                self.maxQ.append(maxQ)
             print(f"action: {str(action)}")
             data = self.tableRepo.moveTable(action)
             
@@ -49,8 +54,10 @@ class TrainMultiAiService(object):
 
         averageScores = sum(self.scores) / len(self.scores)
         averageTurns = sum(self.turns ) / len(self.turns)
-        self.treeRepo.addGameInfo(self.gameRepo.turn, self.gameRepo.score, "TrainMultiAiService")
-        self.treeRepo.addGameInfo(averageTurns, averageScores, "TrainMultiAiServiceAverage")
+        averageMaxQ = sum(self.maxQ) / len(self.maxQ)
+        averageSimulateMaxQ = sum(self.simulateMaxQ) / len(self.simulateMaxQ)
+        self.treeRepo.addGameInfo(self.gameRepo.turn, self.gameRepo.score, averageMaxQ, "TrainMultiAiService")
+        self.treeRepo.addGameInfo(averageTurns, averageScores, averageSimulateMaxQ, "TrainMultiAiServiceAverage")
         print(self.tensorModelRepo.predictedQValue)
         unique, count = np.unique(np.array(self.tensorModelRepo.predictedQValue), return_counts=True)
         print(dict(zip(unique, count)))
@@ -76,13 +83,14 @@ class TrainMultiAiService(object):
                 data = tableRepo.moveTable(dirList[idx])
                 action = dirList[idx]
             else:
-                action = self.selection(tableRepo.getCopyTable(), dirList)
+                action, maxQ = self.selection(tableRepo.getCopyTable(), dirList)
                 if action == -1:
                     idx = random.randrange(0,len(dirList))
                     data = tableRepo.moveTable(dirList[idx])
                     action = dirList[idx]
                 else:
                     data = tableRepo.moveTable(action)
+                    self.simulateMaxQ.append(maxQ)
             
             if not data[0]:
                 print(tableRepo.table)
@@ -113,6 +121,7 @@ class TrainMultiAiService(object):
     
     def selection(self, table: List, dirList, isPrint=False):
         nextChildQValue = self.tensorModelRepo.getActionPredicted(table)[0]
+        maxQ = np.amax(nextChildQValue)
         action = -1
         if isPrint:
             print(np.argmax(np.argsort(-nextChildQValue)))
@@ -122,7 +131,7 @@ class TrainMultiAiService(object):
             if a in dirList:
                 action = a
                 break
-        return action
+        return action, maxQ
 
 
     def backPropagation(self, table: List, score: int):

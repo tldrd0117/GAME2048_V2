@@ -40,10 +40,11 @@ class MongoDataSource(object):
             return cursor["data"]
         return None
     
-    def addGameInfo(self, turn, score, serviceName):
+    def addGameInfo(self, turn, score, averageMaxQ, serviceName):
         self.gameinfo.insert_one({
             "turn": turn,
             "score": score,
+            "maxQ": averageMaxQ,
             "serviceName": serviceName,
             "createdAt": datetime.datetime.now()
         })

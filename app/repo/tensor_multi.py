@@ -57,8 +57,16 @@ class TensorMultitModelRepository(object):
         self.optimizer = self.buildOptimizer()
 
         # 텐서보드 설정
-        self.sess = tf.compat.v1.InteractiveSession()
+        graph = tf.compat.v1.get_default_graph()
+        config = tf.compat.v1.ConfigProto()
+        config.gpu_options.per_process_gpu_memory_fraction = 0.1
+        # config.gpu_options.allow_growth = True
+        # config.log_device_placement = True
+
+        self.sess = tf.compat.v1.Session (config=config, graph= graph)
         K.set_session(self.sess)
+        # self.sess = tf.compat.v1.InteractiveSession()
+        # K.set_session(self.sess)
 
         self.avg_q_max, self.avg_loss = 0, 0
         self.summary_placeholders, self.update_ops, self.summary_op = \
