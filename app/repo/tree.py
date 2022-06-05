@@ -109,4 +109,5 @@ class TreeDbRepository(object):
     def addGameInfo(self, turn, score, averageMaxQ, serviceName, actionDicts):
         self.datasource.addGameInfo(turn, score, averageMaxQ, serviceName, actionDicts)
     
-    
+    def getGameInfo(self, serviceName):
+        return self.datasource.getGameInfo(serviceName)

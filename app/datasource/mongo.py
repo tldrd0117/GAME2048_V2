@@ -52,3 +52,9 @@ class MongoDataSource(object):
             "up": int(actionDicts[2]) if 2 in actionDicts else 0,
             "down": int(actionDicts[3]) if 3 in actionDicts else 0,
         })
+    
+    def getGameInfo(self, serviceName):
+        cursor = self.gameinfo.find({
+            "serviceName": serviceName
+        })
+        return list(cursor)
