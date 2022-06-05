@@ -106,7 +106,7 @@ class TreeDbRepository(object):
     def getExistNode(self, table: str):
         return self.datasource.getNode(str(table))
     
-    def addGameInfo(self, turn, score, averageMaxQ, serviceName):
-        self.datasource.addGameInfo(turn, score, averageMaxQ, serviceName)
+    def addGameInfo(self, turn, score, averageMaxQ, serviceName, actionDicts):
+        self.datasource.addGameInfo(turn, score, averageMaxQ, serviceName, actionDicts)
     
     

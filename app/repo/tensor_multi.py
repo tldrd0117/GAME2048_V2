@@ -36,12 +36,11 @@ class TableNode:
 
 class TensorMultitModelRepository(object):
     nodes = {}
-    predictedQValue = []
     losses = []
     memory: Deque = deque(maxlen=500000)
     def __init__(self) -> None:
         disable_eager_execution()
-        self.state_size = (4,4,1,)
+        self.state_size = (4,4,16,)
         self.action_size = 4
         self.batch_size = 2048
         self.discount_factor = 0.99
@@ -78,6 +77,9 @@ class TensorMultitModelRepository(object):
 
     def updateNodes(self, node: TableNode):
         self.nodes[str(node.table)] = node
+    
+    def resetNodes(self):
+        self.nodes = {}
     
     def getNode(self, table: List):
         if str(table) in self.nodes:
@@ -136,7 +138,7 @@ class TensorMultitModelRepository(object):
         linear_part = error - quadratic_part
         loss = K.mean(0.5 * K.square(quadratic_part) + linear_part)
 
-        rms = RMSprop(lr=0.00001, epsilon=0.01)
+        rms = RMSprop(lr=0.0002, epsilon=0.01)
         updates = rms.get_updates(loss, self.model.trainable_weights)
         train = K.function([self.model.input, a, y], [loss], updates=updates)
 
@@ -153,9 +155,8 @@ class TensorMultitModelRepository(object):
     #         return np.argsort(-q_value[0]), True
     
     def getActionPredicted(self, history):
-        hist = np.array(history).flatten().reshape(1,4,4,1)
+        hist = np.array(self.convertTable(history)).flatten().reshape(1,4,4,16)
         q_value = self.model.predict(hist)
-        self.predictedQValue.append(np.argmax(np.argsort(-q_value)))
         return q_value
 
     def saveDeque(self):
@@ -188,14 +189,24 @@ class TensorMultitModelRepository(object):
             return reward
     
 
+    def convertTable(self, table):
+        tab = [item[:] for item in table]
+        if len(tab) <= 0:
+            return []
+        for i in range(len(tab)):
+            for j in range(len(tab[0])):
+                tab[i][j] = [int(k) for k in list(bin(tab[i][j])[2:].zfill(16))]
+        return tab
+    
+
     def appendSamples(self, tableNodes: List[TableNode]):
         for tableNode in tableNodes:
             if tableNode.parent is None:
                 continue
-            history = np.array(tableNode.parent).flatten().reshape(4,4,1)
+            history = np.array(self.convertTable(tableNode.parent)).flatten().reshape(4,4,16)
             action = tableNode.action
             reward = 1 if tableNode.isScore else 0 
-            nextHistory = np.array(tableNode.table).flatten().reshape(4,4,1)
+            nextHistory = np.array(self.convertTable(tableNode.table)).flatten().reshape(4,4,16)
             self.memory.append((history, int(action), reward, nextHistory))
 
     def trainModel(self):
@@ -205,8 +216,8 @@ class TensorMultitModelRepository(object):
             self.epsilon -= self.epsilon_decay_step
         mini_batch = random.sample(self.memory, self.batch_size)
 
-        history = np.zeros((self.batch_size, 4,4,1))
-        next_history = np.zeros((self.batch_size, 4,4,1))
+        history = np.zeros((self.batch_size, 4,4,16))
+        next_history = np.zeros((self.batch_size, 4,4,16))
         target = np.zeros((self.batch_size,))
         action, reward = [], []
 

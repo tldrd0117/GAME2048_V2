@@ -21,6 +21,14 @@ class TrainMultiAiService(object):
         self.turns = []
         self.maxQ = []
         self.simulateMaxQ = []
+        self.predictedActions = []
+        self.simulatePredictedActions = []
+    
+
+    def averageList(li):
+        if len(li) <= 0:
+            return 0
+        return sum(li) / len(li)
 
     def run(self):
         print("run")
@@ -56,11 +64,15 @@ class TrainMultiAiService(object):
         averageTurns = sum(self.turns ) / len(self.turns)
         averageMaxQ = sum(self.maxQ) / len(self.maxQ)
         averageSimulateMaxQ = sum(self.simulateMaxQ) / len(self.simulateMaxQ)
-        self.treeRepo.addGameInfo(self.gameRepo.turn, self.gameRepo.score, averageMaxQ, "TrainMultiAiService")
-        self.treeRepo.addGameInfo(averageTurns, averageScores, averageSimulateMaxQ, "TrainMultiAiServiceAverage")
-        print(self.tensorModelRepo.predictedQValue)
-        unique, count = np.unique(np.array(self.tensorModelRepo.predictedQValue), return_counts=True)
-        print(dict(zip(unique, count)))
+
+
+        unique1, count1 = np.unique(np.array(self.predictedActions), return_counts=True)
+        unique2, count2 = np.unique(np.array(self.simulatePredictedActions), return_counts=True)
+        actions = dict(zip(unique1, count1))
+        simulateActions = dict(zip(unique2, count2))
+
+        self.treeRepo.addGameInfo(self.gameRepo.turn, self.gameRepo.score, averageMaxQ, "TrainMultiAiServiceValueChange", actions)
+        self.treeRepo.addGameInfo(averageTurns, averageScores, averageSimulateMaxQ, "TrainMultiAiServiceAverageValueChange", simulateActions)
         return self.tensorModelRepo.memory
     
 
@@ -119,12 +131,15 @@ class TrainMultiAiService(object):
         self.turns.append(gameRepo.turn)
 
     
-    def selection(self, table: List, dirList, isPrint=False):
+    def selection(self, table: List, dirList, isMain=False):
         nextChildQValue = self.tensorModelRepo.getActionPredicted(table)[0]
         maxQ = np.amax(nextChildQValue)
         action = -1
-        if isPrint:
+        if isMain:
             print(np.argmax(np.argsort(-nextChildQValue)))
+            self.predictedActions.append(np.argmax(np.argsort(-nextChildQValue)))
+        else:
+            self.simulatePredictedActions.append(np.argmax(np.argsort(-nextChildQValue)))
         sortValue = list(np.argsort(-nextChildQValue))
         for i in reversed(range(0,4)):
             a = sortValue.index(i)
@@ -145,3 +160,5 @@ class TrainMultiAiService(object):
                 break
             node = self.tensorModelRepo.getExistNode(str(node.parent))
         self.tensorModelRepo.appendSamples(nodeList)
+        self.tensorModelRepo.resetNodes()
+
