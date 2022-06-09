@@ -3,8 +3,8 @@ from typing import Deque, Dict, List
 from pexpect import ExceptionPexpect
 import tensorflow as tf
 import numpy as np
-from keras.models import Sequential
-from keras.layers import Dense, Flatten, Conv2D
+from keras.models import Sequential, Model
+from keras.layers import Dense, Flatten, Conv2D, Dropout, Add, concatenate
 from keras.regularizers import l2
 from keras import backend as K
 from keras.optimizers import RMSprop
@@ -110,14 +110,21 @@ class TensorMultitModelRepository(object):
 
 
     def buildModel(self):
-        model = Sequential()
-        model.add(Conv2D(32, (2, 2), padding='same', strides=(1, 1), activation='relu', input_shape=self.state_size))
-        model.add(Conv2D(64, (2, 2), padding='same', strides=(1, 1), activation='relu'))
-        model.add(Conv2D(64, (2, 2), padding='same', strides=(1, 1), activation='relu'))
-        model.add(Flatten())
-        model.add(Dense(512, activation='relu'))
-        model.add(Dense(128, activation='relu'))
-        model.add(Dense(4))
+        model1 = Sequential()
+        model1.add(Conv2D(32, (16, 1), padding='same', strides=(16, 1), activation='relu', kernel_regularizer=l2(0.01) , input_shape=self.state_size))
+        model1.add(Conv2D(64, (2, 1), padding='same', strides=(1, 1), activation='relu', kernel_regularizer=l2(0.01)))
+        model1.add(Flatten())
+
+        model2 = Sequential()
+        model2.add(Conv2D(32, (16, 1), padding='same', strides=(16, 1), activation='relu', kernel_regularizer=l2(0.01) , input_shape=self.state_size))
+        model2.add(Conv2D(64, (1, 2), padding='same', strides=(1, 1), activation='relu', kernel_regularizer=l2(0.01)))
+        model2.add(Flatten())
+
+        model_concat = concatenate([model1.output, model2.output])
+        model_concat = Dense(256, activation='relu')(model_concat)
+        model_concat = Dense(128, activation='relu')(model_concat)
+        model_concat = Dense(4, activation='relu')(model_concat)
+        model = Model(inputs=[model1.input, model2.input], outputs=model_concat)
         model.summary()
         return model
     
@@ -155,8 +162,10 @@ class TensorMultitModelRepository(object):
     #         return np.argsort(-q_value[0]), True
     
     def getActionPredicted(self, history):
-        hist = np.array(self.convertTable(history)).flatten().reshape(1,4,4,16)
-        q_value = self.model.predict(hist)
+        histTable = self.convertTable(history)
+        hist = np.array(histTable).flatten().reshape(1,4,4,16)
+        q_value = self.model.predict([hist, hist])
+        histTable = None
         return q_value
 
     def saveDeque(self):
@@ -203,11 +212,15 @@ class TensorMultitModelRepository(object):
         for tableNode in tableNodes:
             if tableNode.parent is None:
                 continue
-            history = np.array(self.convertTable(tableNode.parent)).flatten().reshape(4,4,16)
+            historyTable = self.convertTable(tableNode.parent)
+            history = np.array(historyTable).flatten().reshape(4,4,16)
             action = tableNode.action
             reward = 1 if tableNode.isScore else 0 
-            nextHistory = np.array(self.convertTable(tableNode.table)).flatten().reshape(4,4,16)
+            nextHisotryTable = self.convertTable(tableNode.table)
+            nextHistory = np.array(nextHisotryTable).flatten().reshape(4,4,16)
             self.memory.append((history, int(action), reward, nextHistory))
+            historyTable = None
+            nextHisotryTable = None
 
     def trainModel(self):
         if len(self.memory) < 50000:
@@ -227,13 +240,13 @@ class TensorMultitModelRepository(object):
             action.append(mini_batch[i][1])
             reward.append(mini_batch[i][2])
 
-        target_value = self.targetModel.predict(next_history)
+        target_value = self.targetModel.predict([next_history, next_history])
 
         for i in range(self.batch_size):
             target[i] = reward[i] + self.discount_factor * \
                                     np.amax(target_value[i])
 
-        loss = self.optimizer([history, action, target])
+        loss = self.optimizer([[history, history], action, target])
         self.avg_loss += loss[0]
         self.losses.append(loss[0])
         return loss

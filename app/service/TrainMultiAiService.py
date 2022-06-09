@@ -71,8 +71,8 @@ class TrainMultiAiService(object):
         actions = dict(zip(unique1, count1))
         simulateActions = dict(zip(unique2, count2))
 
-        self.treeRepo.addGameInfo(self.gameRepo.turn, self.gameRepo.score, averageMaxQ, "TrainMultiAiServiceValueChange", actions)
-        self.treeRepo.addGameInfo(averageTurns, averageScores, averageSimulateMaxQ, "TrainMultiAiServiceAverageValueChange", simulateActions)
+        self.treeRepo.addGameInfo(self.gameRepo.turn, self.gameRepo.score, averageMaxQ, "TrainMultiAiServiceLRChange", actions)
+        self.treeRepo.addGameInfo(averageTurns, averageScores, averageSimulateMaxQ, "TrainMultiAiServiceAverageLRChange", simulateActions)
         return self.tensorModelRepo.memory
     
 
@@ -114,9 +114,13 @@ class TrainMultiAiService(object):
             gameRepo.nextTurn(data[1])
             tableRepo.genRandom()
 
+                
+
             childNode = self.tensorModelRepo.getNode(tableRepo.getCopyTable())
             childNode.action = action
             childNode.rootScore = rootScore
+            childNode.isScore = data[1] > 0
+
             isDup = False
             for d in node.childs:
                 if str(childNode.table) == str(d[0]):

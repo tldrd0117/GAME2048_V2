@@ -12,6 +12,7 @@ from multiprocessing import Lock, Process, freeze_support, Queue, Manager, Pool
 import time
 import tensorflow as tf
 from work import work
+import tracemalloc
 
 sys.setrecursionlimit(10000)
 
@@ -46,7 +47,7 @@ if __name__=='__main__':
     # freeze_support()
     start = int(time.time())
     procs = []
-    processCount = 8
+    processCount = 6
     weight = None
     for _ in range(1000):
         with Pool(processes=processCount) as p:
@@ -58,6 +59,8 @@ if __name__=='__main__':
             for memory in memories:
                 result = result + memory
             weight = p.map(train, [result])[0]
+            result = None
+            memories = None
         
     print("***run time(sec) :", int(time.time()) - start)
 # poetry run python app/main_multi.py
