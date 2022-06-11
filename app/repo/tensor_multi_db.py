@@ -15,6 +15,7 @@ from collections import deque
 import os
 from tensorflow.python.framework.ops import disable_eager_execution
 from filelock import FileLock
+from datasource.mongo import MongoDataSource
 
 class TableNode:
     table: List
@@ -35,11 +36,12 @@ class TableNode:
         print(f"parent: {self.parent}")
         print(f"childs: {str(self.childs)}")
 
-class TensorMultitModelRepository(object):
+class TensorMultitModelDbRepository(object):
     nodes = {}
     losses = []
     memory: Deque = deque(maxlen=500000)
     def __init__(self) -> None:
+        self.db = MongoDataSource()
         disable_eager_execution()
         self.state_size = (4,4,16,)
         self.action_size = 4
@@ -111,6 +113,10 @@ class TensorMultitModelRepository(object):
 
     def updateMemory(self, memory):
         self.memory = memory
+    
+    def updateMemoryFromDb(self, startDate, endDate):
+        self.memory = self.db.getSamplesBetween(startDate, endDate)
+        print(f"memory length: {str(len(self.memory))}")
     
     def updateTargetModel(self, weight):
         self.model.set_weights(weight)
@@ -190,14 +196,21 @@ class TensorMultitModelRepository(object):
         return deque(maxlen=500000)
     
     def loadModel(self):
+        weight = self.db.getLastWeight()
+        if weight is not None:
+            self.model.set_weights(weight)
+            self.updateTargetModel(weight)
+        else:
         # with FileLock("app/data/model/game2048_dqn.h5.lock", timeout=100):
-        if exists("app/data/model/game2048_dqn_multi.h5"):
-            self.model.load_weights("app/data/model/game2048_dqn_multi.h5")
-            self.updateTargetModel(self.model.get_weights())
+            if exists("app/data/model/game2048_dqn_multi.h5"):
+                self.model.load_weights("app/data/model/game2048_dqn_multi.h5")
+                self.updateTargetModel(self.model.get_weights())
+                self.saveModel(0)
 
-    def saveModel(self):
+    def saveModel(self, loss):
+        self.db.saveWeight(self.model.get_weights(), loss)
         # with FileLock("app/data/model/game2048_dqn.h5.lock", timeout=100):
-        self.model.save_weights("app/data/model/game2048_dqn_multi.h5")
+        # self.model.save_weights("app/data/model/game2048_dqn_multi.h5")
 
     def getReward(self, reward):
         if reward > 100:
@@ -229,8 +242,7 @@ class TensorMultitModelRepository(object):
                 nextHistory = np.array(nextHisotryTable).flatten().reshape(4,4,16)
             else:
                 nextHistory = None
-            # data = pickle.dumps((history, int(action), reward, nextHistory))
-            self.memory.append((history, int(action), reward, nextHistory))
+            self.db.updateSamples((history, int(action), reward, nextHistory))
             historyTable = None
             nextHisotryTable = None
 

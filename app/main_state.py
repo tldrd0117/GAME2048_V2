@@ -6,7 +6,7 @@ from matplotlib.widgets import Button
 
 tree = TreeDbRepository()
 
-data = tree.getGameInfo("TrainMultiAiServiceAverageValueChange")
+data = tree.getGameInfo("TrainMultiAiServiceAverageLRChange")
 print(f"Epoch Length:{len(data)}")
 
 
@@ -76,9 +76,10 @@ def plot():
             maxQ.append(0)
     fig, ax = plt.subplots()
     ax2 = ax.twinx()
-    btns, lines = averagePlot(ax, dates, maxQ, "maxQ", 0)
-    btns2, lines2 = averagePlot(ax2, dates, scores, "scores", 1)
-    btns3, lines3 = averagePlot(ax2, dates, turns, "turns", 2)
+    y = range(len(data))
+    btns, lines = averagePlot(ax, y, maxQ, "maxQ", 0)
+    btns2, lines2 = averagePlot(ax2, y, scores, "scores", 1)
+    btns3, lines3 = averagePlot(ax2, y, turns, "turns", 2)
     applyEvent(btns, lines)
     applyEvent(btns2, lines2)
     applyEvent(btns3, lines3)
