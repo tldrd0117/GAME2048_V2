@@ -1,6 +1,7 @@
 from collections import deque
 from functools import reduce
 import multiprocessing
+
 from service.RunAiService import RunAiService
 from service.RandomAiService import RandomAiService
 from service.MCTSAiService import MCTSAiService
@@ -15,6 +16,7 @@ import time
 import tensorflow as tf
 from work import work
 import tracemalloc
+import datetime
 
 sys.setrecursionlimit(10000)
 
@@ -23,12 +25,33 @@ def work(d):
     return ai.run()
 
 def train(dates):
+    print("train")
     startDate = dates[0]
     endDate = dates[1]
 
     tensor = TensorMultitModelDbRepository()
     tensor.loadModel()
     tensor.updateMemoryFromDb(startDate, endDate)
+    
+    trainCount = int(len(tensor.memory) / (tensor.batch_size * 2) )
+    print(len(tensor.memory))
+    for i in range(trainCount):
+        print(f"train: {i}")
+        tensor.trainModel()
+    losses = tensor.losses
+    avgLoss = str(sum(losses)/len(losses)) if len(losses) > 0 else 0
+    if len(losses) > 0:
+        print(f"loss: {avgLoss}")
+    tensor.saveModel("multi_db_init", avgLoss)
+
+def train_old(dates):
+    print("train old")
+    startDate = dates[0]
+    endDate = dates[1]
+
+    tensor = TensorMultitModelDbRepository()
+    tensor.loadModel()
+    tensor.updateMemoryFromDbRandom(startDate, 100000)
     
     trainCount = int(len(tensor.memory) / (tensor.batch_size * 2) )
     print(len(tensor.memory))
@@ -57,7 +80,7 @@ if __name__=='__main__':
         with Pool(processes=processCount) as p:
             result = p.map_async(work, [None]*processCount)
             try:
-                dates = result.get(timeout=1800)
+                dates = result.get(timeout=3600)
             except multiprocessing.TimeoutError:
                 p.terminate()
                 p.join()
@@ -67,6 +90,7 @@ if __name__=='__main__':
             d = calDate(dates)
             print(d)
             p.map(train, [d])
+            p.map(train_old, [d])
             result = None
             dates = None
         

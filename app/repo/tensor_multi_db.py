@@ -107,6 +107,9 @@ class TensorMultitModelDbRepository(object):
         self.memory = self.db.getSamplesBetween(startDate, endDate)
         print(f"memory length: {str(len(self.memory))}")
     
+    def updateMemoryFromDbRandom(self, startDate, size):
+        self.memory = self.db.getSamplesRandom(startDate, size)
+    
     def updateTargetModel(self, weight):
         self.model.set_weights(weight)
         self.targetModel.set_weights(weight)

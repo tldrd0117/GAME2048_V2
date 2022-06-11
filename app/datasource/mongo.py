@@ -106,6 +106,13 @@ class MongoDataSource(object):
         })
         return list(map(lambda d : pickle.loads(d["data"]), list(cursor)))
     
+    def getSamplesRandom(self, startDate, size):
+        cursor = self.samples.aggregate([
+            {"$match": { "createdAt": { "$lte": startDate }}},
+            {"$sample": { "size": size } }
+        ], allowDiskUse=True)
+        return list(map(lambda d : pickle.loads(d["data"]), list(cursor)))
+    
     def saveWeight(self, name, weight, loss):
         data = pickle.dumps(weight)
         self.weights.insert_one({
