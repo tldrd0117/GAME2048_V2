@@ -20,21 +20,14 @@ from datasource.mongo import MongoDataSource
 class TableNode:
     table: List
     action: int = -1
-    visit: int = 0
-    scores: List = []
     parent: str = None
-    rootScore: int = 0
     score: int = 0
-    childs: List[Dict[str,int]] = []
     def print(self):
         print("table")
         for row in range(0,4):
             print(self.table[row])
         print(f"action: {str(self.action)}")
-        print(f"visit: {str(self.visit)}")
-        print(f"scores: {str(self.scores)}")
         print(f"parent: {self.parent}")
-        print(f"childs: {str(self.childs)}")
 
 class TensorMultitModelDbRepository(object):
     nodes = {}
@@ -85,21 +78,17 @@ class TensorMultitModelDbRepository(object):
         self.nodes = {}
     
     def getNode(self, table: List):
-        if str(table) in self.nodes:
-            node = self.nodes[str(table)]
-        else:
-            node = TableNode()
-            node.table = table
-            node.childs = []
-            node.scores = []
+        # if str(table) in self.nodes:
+        #     node = self.nodes[str(table)]
+        # else:
+        node = TableNode()
+        node.table = table
         return node
     
 
     def newNode(self):
         node = TableNode()
         node.table = []
-        node.childs = []
-        node.scores = []
         return node
     
     def getCopyTree(self):
@@ -205,10 +194,10 @@ class TensorMultitModelDbRepository(object):
             if exists("app/data/model/game2048_dqn_multi.h5"):
                 self.model.load_weights("app/data/model/game2048_dqn_multi.h5")
                 self.updateTargetModel(self.model.get_weights())
-                self.saveModel(0)
+                self.saveModel("multi_db_init",0)
 
-    def saveModel(self, loss):
-        self.db.saveWeight(self.model.get_weights(), loss)
+    def saveModel(self, modelName, loss):
+        self.db.saveWeight(modelName, self.model.get_weights(), loss)
         # with FileLock("app/data/model/game2048_dqn.h5.lock", timeout=100):
         # self.model.save_weights("app/data/model/game2048_dqn_multi.h5")
 

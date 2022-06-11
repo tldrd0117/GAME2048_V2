@@ -106,9 +106,10 @@ class MongoDataSource(object):
         })
         return list(map(lambda d : pickle.loads(d["data"]), list(cursor)))
     
-    def saveWeight(self, weight, loss):
+    def saveWeight(self, name, weight, loss):
         data = pickle.dumps(weight)
         self.weights.insert_one({
+            "name": name,
             "data": Binary(data),
             "createdAt": datetime.datetime.now(),
             "loss": loss

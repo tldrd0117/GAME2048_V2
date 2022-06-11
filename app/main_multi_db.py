@@ -39,7 +39,7 @@ def train(dates):
     avgLoss = str(sum(losses)/len(losses)) if len(losses) > 0 else 0
     if len(losses) > 0:
         print(f"loss: {avgLoss}")
-    tensor.saveModel(avgLoss)
+    tensor.saveModel("multi_db_init", avgLoss)
 
 def calDate(dateList):
     if len(dateList) <= 0:

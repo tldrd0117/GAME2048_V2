@@ -84,11 +84,9 @@ class TrainSaveDbMultiAiService(object):
         tableRepo.table = self.tableRepo.getCopyTable()
         gameRepo.turn = self.gameRepo.turn
         gameRepo.score = self.gameRepo.score
-        rootScore = self.gameRepo.score
         simulateMaxQ = []
         while True:
             node = self.tensorModelRepo.getNode(tableRepo.getCopyTable())
-            node.rootScore = rootScore
             dirList = tableRepo.getPossibleDirList()
             if len(dirList) > 0:
                 if gameRepo.turn / 2 > len(simulateMaxQ):
@@ -129,18 +127,19 @@ class TrainSaveDbMultiAiService(object):
 
                 childNode = self.tensorModelRepo.getNode(tableRepo.getCopyTable())
                 childNode.action = action
-                childNode.rootScore = rootScore
+                # childNode.rootScore = rootScore
                 childNode.score = 1 if data[1] > 0 else 0
+                self.tensorModelRepo.appendSamples([childNode])
 
-                isDup = False
-                for d in node.childs:
-                    if str(childNode.table) == str(d[0]):
-                        isDup = True
-                if not isDup:
-                    node.childs.append([childNode.table, action])
-                childNode.parent = node.table
-                self.tensorModelRepo.updateNodes(node)
-                self.tensorModelRepo.updateNodes(childNode)
+                # isDup = False
+                # for d in node.childs:
+                #     if str(childNode.table) == str(d[0]):
+                #         isDup = True
+                # if not isDup:
+                #     node.childs.append([childNode.table, action])
+                # childNode.parent = node.table
+                # self.tensorModelRepo.updateNodes(node)
+                # self.tensorModelRepo.updateNodes(childNode)
 
             # 불가능한 액션은 최종보상을 0으로 세팅
             if len(dirList) < 4:
@@ -152,20 +151,13 @@ class TrainSaveDbMultiAiService(object):
                 for action in impossibleAction:
                     childNode = self.tensorModelRepo.newNode()
                     childNode.action = action
-                    childNode.rootScore = rootScore
+                    # childNode.rootScore = rootScore
                     childNode.score = 0
-
-                    isDup = False
-                    for d in node.childs:
-                        if str(childNode.table) == str(d[0]):
-                            isDup = True
-                    if not isDup:
-                        node.childs.append([childNode.table, action])
                     childNode.parent = node.table
                     self.tensorModelRepo.appendSamples([childNode])
             if len(dirList) <= 0:
                 break
-        self.backPropagation(tableRepo.table, gameRepo.score)
+        # self.backPropagation(tableRepo.table, gameRepo.score)
         self.turns.append(gameRepo.turn)
         self.scores.append(gameRepo.score)
         self.simulateMaxQ = self.simulateMaxQ + simulateMaxQ
@@ -195,7 +187,7 @@ class TrainSaveDbMultiAiService(object):
         node: TableNode = self.tensorModelRepo.getExistNode(str(table))
         while True:
             nodeList.append(node)
-            node.visit = node.visit + 1
+            # node.visit = node.visit + 1
             # node.scores.append(score)
             if node.parent is None:
                 break
