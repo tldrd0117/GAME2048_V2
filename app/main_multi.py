@@ -1,4 +1,5 @@
 from collections import deque
+import multiprocessing
 from service.RunAiService import RunAiService
 from service.RandomAiService import RandomAiService
 from service.MCTSAiService import MCTSAiService
@@ -31,7 +32,8 @@ def train(memory):
         print(f"train: {i}")
         tensor.trainModel()
     losses = tensor.losses
-    print(f"loss: {str(sum(losses)/len(losses))}")
+    if len(losses) > 0:
+        print(f"loss: {str(sum(losses)/len(losses))}")
     weight = tensor.model.get_weights()
     tensor.saveModel()
     return weight
@@ -47,13 +49,20 @@ if __name__=='__main__':
     # freeze_support()
     start = int(time.time())
     procs = []
-    processCount = 6
+    processCount = 3
     weight = None
     for _ in range(1000):
         with Pool(processes=processCount) as p:
             if weight is None:
                 weight = p.map(loadModel, [None])[0]
-            memories = p.map(work, [weight]*processCount)
+            # memories = p.map(work, [weight]*processCount)
+            result = p.map_async(work, [weight]*processCount)
+            try:
+                memories = result.get(timeout=1800)
+            except multiprocessing.TimeoutError:
+                p.terminate()
+                p.join()
+                continue
             print(len(memories))
             result = deque([])
             for memory in memories:

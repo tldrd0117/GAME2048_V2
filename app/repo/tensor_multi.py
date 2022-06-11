@@ -1,4 +1,5 @@
 from genericpath import exists
+from statistics import mode
 from typing import Deque, Dict, List
 from pexpect import ExceptionPexpect
 import tensorflow as tf
@@ -22,7 +23,7 @@ class TableNode:
     scores: List = []
     parent: str = None
     rootScore: int = 0
-    isScore: bool = False
+    score: int = 0
     childs: List[Dict[str,int]] = []
     def print(self):
         print("table")
@@ -91,6 +92,14 @@ class TensorMultitModelRepository(object):
             node.scores = []
         return node
     
+
+    def newNode(self):
+        node = TableNode()
+        node.table = []
+        node.childs = []
+        node.scores = []
+        return node
+    
     def getCopyTree(self):
         return {key: value[:] for key, value in self.nodes.items()}
 
@@ -110,21 +119,20 @@ class TensorMultitModelRepository(object):
 
 
     def buildModel(self):
-        model1 = Sequential()
-        model1.add(Conv2D(32, (16, 1), padding='same', strides=(16, 1), activation='relu', kernel_regularizer=l2(0.01) , input_shape=self.state_size))
-        model1.add(Conv2D(64, (2, 1), padding='same', strides=(1, 1), activation='relu', kernel_regularizer=l2(0.01)))
-        model1.add(Flatten())
-
-        model2 = Sequential()
-        model2.add(Conv2D(32, (16, 1), padding='same', strides=(16, 1), activation='relu', kernel_regularizer=l2(0.01) , input_shape=self.state_size))
-        model2.add(Conv2D(64, (1, 2), padding='same', strides=(1, 1), activation='relu', kernel_regularizer=l2(0.01)))
-        model2.add(Flatten())
-
-        model_concat = concatenate([model1.output, model2.output])
-        model_concat = Dense(256, activation='relu')(model_concat)
-        model_concat = Dense(128, activation='relu')(model_concat)
-        model_concat = Dense(4, activation='relu')(model_concat)
-        model = Model(inputs=[model1.input, model2.input], outputs=model_concat)
+        model = Sequential()
+        model.add(Conv2D(32, (2, 2), padding='same', strides=(1, 1), activation='relu', kernel_regularizer=l2(0.01) , input_shape=self.state_size))
+        model.add(Conv2D(64, (2, 2), padding='same', strides=(1, 1), activation='relu', kernel_regularizer=l2(0.01)))
+        model.add(Conv2D(64, (2, 2), padding='same', strides=(1, 1), activation='relu', kernel_regularizer=l2(0.01)))
+        model.add(Flatten())
+        model.add(Dense(512, activation="relu"))
+        model.add(Dropout(0.5))
+        model.add(Dense(256, activation="relu"))
+        model.add(Dropout(0.5))
+        model.add(Dense(128, activation="relu"))
+        model.add(Dropout(0.5))
+        model.add(Dense(32, activation="relu"))
+        model.add(Dropout(0.5))
+        model.add(Dense(4, activation="relu"))
         model.summary()
         return model
     
@@ -145,7 +153,7 @@ class TensorMultitModelRepository(object):
         linear_part = error - quadratic_part
         loss = K.mean(0.5 * K.square(quadratic_part) + linear_part)
 
-        rms = RMSprop(lr=0.0002, epsilon=0.01)
+        rms = RMSprop(lr=0.0001, epsilon=0.01)
         updates = rms.get_updates(loss, self.model.trainable_weights)
         train = K.function([self.model.input, a, y], [loss], updates=updates)
 
@@ -164,7 +172,7 @@ class TensorMultitModelRepository(object):
     def getActionPredicted(self, history):
         histTable = self.convertTable(history)
         hist = np.array(histTable).flatten().reshape(1,4,4,16)
-        q_value = self.model.predict([hist, hist])
+        q_value = self.model.predict(hist)
         histTable = None
         return q_value
 
@@ -215,15 +223,18 @@ class TensorMultitModelRepository(object):
             historyTable = self.convertTable(tableNode.parent)
             history = np.array(historyTable).flatten().reshape(4,4,16)
             action = tableNode.action
-            reward = 1 if tableNode.isScore else 0 
-            nextHisotryTable = self.convertTable(tableNode.table)
-            nextHistory = np.array(nextHisotryTable).flatten().reshape(4,4,16)
+            reward = tableNode.score
+            if len(tableNode.table) > 0:
+                nextHisotryTable = self.convertTable(tableNode.table)
+                nextHistory = np.array(nextHisotryTable).flatten().reshape(4,4,16)
+            else:
+                nextHistory = None
             self.memory.append((history, int(action), reward, nextHistory))
             historyTable = None
             nextHisotryTable = None
 
     def trainModel(self):
-        if len(self.memory) < 50000:
+        if len(self.memory) < 10000:
             return
         if self.epsilon > self.epsilon_end:
             self.epsilon -= self.epsilon_decay_step
@@ -240,13 +251,16 @@ class TensorMultitModelRepository(object):
             action.append(mini_batch[i][1])
             reward.append(mini_batch[i][2])
 
-        target_value = self.targetModel.predict([next_history, next_history])
+        target_value = self.targetModel.predict(next_history)
 
         for i in range(self.batch_size):
-            target[i] = reward[i] + self.discount_factor * \
+            if next_history[i] is None:
+                target[i] = reward[i]
+            else:
+                target[i] = reward[i] + self.discount_factor * \
                                     np.amax(target_value[i])
 
-        loss = self.optimizer([[history, history], action, target])
+        loss = self.optimizer([history, action, target])
         self.avg_loss += loss[0]
         self.losses.append(loss[0])
         return loss

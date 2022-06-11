@@ -40,7 +40,7 @@ class MongoDataSource(object):
             return cursor["data"]
         return None
     
-    def addGameInfo(self, turn, score, averageMaxQ, serviceName, actionDicts):
+    def addGameInfo(self, turn, score, averageMaxQ, serviceName, actionDicts, gameCount):
         self.gameinfo.insert_one({
             "turn": turn,
             "score": score,
@@ -51,6 +51,7 @@ class MongoDataSource(object):
             "right": int(actionDicts[1]) if 1 in actionDicts else 0,
             "up": int(actionDicts[2]) if 2 in actionDicts else 0,
             "down": int(actionDicts[3]) if 3 in actionDicts else 0,
+            "gameCount": gameCount
         })
     
     def getGameInfo(self, serviceName):

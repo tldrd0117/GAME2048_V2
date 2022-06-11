@@ -2,7 +2,7 @@ from multiprocessing import Lock
 from typing import List
 from repo.tensor_multi import TensorMultitModelRepository
 from repo.game import GameRepository
-from repo.table import TableRepository
+from repo.table import TableRepository, Direction
 from repo.tree import TableNode, TreeDbRepository
 
 import random
@@ -17,12 +17,13 @@ class TrainMultiAiService(object):
         self.tensorModelRepo = TensorMultitModelRepository()
         if weight is not None:
             self.tensorModelRepo.updateTargetModel(weight)
-        self.scores = []
-        self.turns = []
         self.maxQ = []
         self.simulateMaxQ = []
         self.predictedActions = []
         self.simulatePredictedActions = []
+        self.turns = []
+        self.scores = []
+        
     
 
     def averageList(li):
@@ -33,13 +34,14 @@ class TrainMultiAiService(object):
     def run(self):
         print("run")
         self.gameRepo.initGame()
-        
+        simulateCount = 0
         while True:
             dirList = self.tableRepo.getPossibleDirList()
             print(dirList)
             if len(dirList) <= 0:
                 break
             for i in range(10):
+                simulateCount = simulateCount + 1
                 self.simulate()
             action, maxQ = self.selection(self.tableRepo.table, dirList, True)
             if action == -1:
@@ -60,19 +62,18 @@ class TrainMultiAiService(object):
         print("end")
         self.tableRepo.printTable()
 
-        averageScores = sum(self.scores) / len(self.scores)
-        averageTurns = sum(self.turns ) / len(self.turns)
         averageMaxQ = sum(self.maxQ) / len(self.maxQ)
-        averageSimulateMaxQ = sum(self.simulateMaxQ) / len(self.simulateMaxQ)
-
-
         unique1, count1 = np.unique(np.array(self.predictedActions), return_counts=True)
-        unique2, count2 = np.unique(np.array(self.simulatePredictedActions), return_counts=True)
         actions = dict(zip(unique1, count1))
+        averageScores = sum(self.scores) / len(self.scores)
+        averageTurns = sum(self.turns) / len(self.turns)
+
+        averageSimulateMaxQ = sum(self.simulateMaxQ) / len(self.simulateMaxQ) if len(self.simulateMaxQ) > 0 else 0
+        unique2, count2 = np.unique(np.array(self.simulatePredictedActions), return_counts=True)
         simulateActions = dict(zip(unique2, count2))
 
-        self.treeRepo.addGameInfo(self.gameRepo.turn, self.gameRepo.score, averageMaxQ, "TrainMultiAiServiceLRChange", actions)
-        self.treeRepo.addGameInfo(averageTurns, averageScores, averageSimulateMaxQ, "TrainMultiAiServiceAverageLRChange", simulateActions)
+        self.treeRepo.addGameInfo(averageTurns, averageScores, averageSimulateMaxQ, "TrainMultiAiServiceAverageLRChange", simulateActions, simulateCount + 1)
+        self.treeRepo.addGameInfo(self.gameRepo.turn, self.gameRepo.score, averageMaxQ, "TrainMultiAiServiceLRChange", actions, 1)
         return self.tensorModelRepo.memory
     
 
@@ -83,70 +84,106 @@ class TrainMultiAiService(object):
         gameRepo.turn = self.gameRepo.turn
         gameRepo.score = self.gameRepo.score
         rootScore = self.gameRepo.score
+        simulateMaxQ = []
         while True:
             node = self.tensorModelRepo.getNode(tableRepo.getCopyTable())
             node.rootScore = rootScore
             dirList = tableRepo.getPossibleDirList()
+            if len(dirList) > 0:
+                if gameRepo.turn / 2 > len(simulateMaxQ):
+                    action, maxQ = self.selection(tableRepo.getCopyTable(), dirList)
+                    if action == -1:
+                        idx = random.randrange(0,len(dirList))
+                        data = tableRepo.moveTable(dirList[idx])
+                        action = dirList[idx]
+                    else:
+                        data = tableRepo.moveTable(action)
+                        simulateMaxQ.append(maxQ)
+                else:
+                    val = random.randrange(0,2)
+                    if val == 0:
+                        idx = random.randrange(0,len(dirList))
+                        data = tableRepo.moveTable(dirList[idx])
+                        action = dirList[idx]
+                    else:
+                        action, maxQ = self.selection(tableRepo.getCopyTable(), dirList)
+                        if action == -1:
+                            idx = random.randrange(0,len(dirList))
+                            data = tableRepo.moveTable(dirList[idx])
+                            action = dirList[idx]
+                        else:
+                            data = tableRepo.moveTable(action)
+                            simulateMaxQ.append(maxQ)
+                
+                if not data[0]:
+                    print(tableRepo.table)
+                    print(action)
+                    print("same move")
+                    node.print()
+                    break
+
+                gameRepo.nextTurn(data[1])
+                tableRepo.genRandom()
+                    
+
+                childNode = self.tensorModelRepo.getNode(tableRepo.getCopyTable())
+                childNode.action = action
+                childNode.rootScore = rootScore
+                childNode.score = 1 if data[1] > 0 else 0
+
+                isDup = False
+                for d in node.childs:
+                    if str(childNode.table) == str(d[0]):
+                        isDup = True
+                if not isDup:
+                    node.childs.append([childNode.table, action])
+                childNode.parent = node.table
+                self.tensorModelRepo.updateNodes(node)
+                self.tensorModelRepo.updateNodes(childNode)
+
+            # 불가능한 액션은 최종보상을 0으로 세팅
+            if len(dirList) < 4:
+                li = [Direction.LEFT, Direction.RIGHT, Direction.UP, Direction.DOWN]
+                impossibleAction = []
+                for dir in li:
+                    if dir not in dirList:
+                        impossibleAction.append(dir)
+                for action in impossibleAction:
+                    childNode = self.tensorModelRepo.newNode()
+                    childNode.action = action
+                    childNode.rootScore = rootScore
+                    childNode.score = 0
+
+                    isDup = False
+                    for d in node.childs:
+                        if str(childNode.table) == str(d[0]):
+                            isDup = True
+                    if not isDup:
+                        node.childs.append([childNode.table, action])
+                    childNode.parent = node.table
+                    self.tensorModelRepo.appendSamples([childNode])
             if len(dirList) <= 0:
                 break
-            val = random.randrange(0,2)
-            if val == 0:
-                idx = random.randrange(0,len(dirList))
-                data = tableRepo.moveTable(dirList[idx])
-                action = dirList[idx]
-            else:
-                action, maxQ = self.selection(tableRepo.getCopyTable(), dirList)
-                if action == -1:
-                    idx = random.randrange(0,len(dirList))
-                    data = tableRepo.moveTable(dirList[idx])
-                    action = dirList[idx]
-                else:
-                    data = tableRepo.moveTable(action)
-                    self.simulateMaxQ.append(maxQ)
-            
-            if not data[0]:
-                print(tableRepo.table)
-                print(action)
-                print("same move")
-                node.print()
-                break
 
-            gameRepo.nextTurn(data[1])
-            tableRepo.genRandom()
 
-                
-
-            childNode = self.tensorModelRepo.getNode(tableRepo.getCopyTable())
-            childNode.action = action
-            childNode.rootScore = rootScore
-            childNode.isScore = data[1] > 0
-
-            isDup = False
-            for d in node.childs:
-                if str(childNode.table) == str(d[0]):
-                    isDup = True
-            if not isDup:
-                node.childs.append([childNode.table, action])
-            childNode.parent = node.table
-            self.tensorModelRepo.updateNodes(node)
-            self.tensorModelRepo.updateNodes(childNode)
         self.backPropagation(tableRepo.table, gameRepo.score)
-        self.scores.append(gameRepo.score)
         self.turns.append(gameRepo.turn)
+        self.scores.append(gameRepo.score)
+        self.simulateMaxQ = self.simulateMaxQ + simulateMaxQ
 
-    
+
     def selection(self, table: List, dirList, isMain=False):
         nextChildQValue = self.tensorModelRepo.getActionPredicted(table)[0]
         maxQ = np.amax(nextChildQValue)
         action = -1
         if isMain:
-            print(np.argmax(np.argsort(-nextChildQValue)))
-            self.predictedActions.append(np.argmax(np.argsort(-nextChildQValue)))
+            print(f"max:{np.argmax(nextChildQValue)} q: {str(nextChildQValue)}")
+            self.predictedActions.append(np.argmax(nextChildQValue))
         else:
-            self.simulatePredictedActions.append(np.argmax(np.argsort(-nextChildQValue)))
-        sortValue = list(np.argsort(-nextChildQValue))
+            self.simulatePredictedActions.append(np.argmax(nextChildQValue))
+        sortValue = list(np.argsort(nextChildQValue))
         for i in reversed(range(0,4)):
-            a = sortValue.index(i)
+            a = sortValue[i]
             if a in dirList:
                 action = a
                 break
