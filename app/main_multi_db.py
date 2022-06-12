@@ -51,7 +51,7 @@ def train_old(dates):
 
     tensor = TensorMultitModelDbRepository()
     tensor.loadModel()
-    tensor.updateMemoryFromDbRandom(startDate, 100000)
+    tensor.updateMemoryFromDbRandom(startDate, 500000)
     
     trainCount = int(len(tensor.memory) / (tensor.batch_size * 2) )
     print(len(tensor.memory))
@@ -62,7 +62,7 @@ def train_old(dates):
     avgLoss = str(sum(losses)/len(losses)) if len(losses) > 0 else 0
     if len(losses) > 0:
         print(f"loss: {avgLoss}")
-    tensor.saveModel("multi_db_init", avgLoss)
+    tensor.saveModel("multi_db_init_old", avgLoss)
 
 def calDate(dateList):
     if len(dateList) <= 0:
@@ -80,7 +80,7 @@ if __name__=='__main__':
         with Pool(processes=processCount) as p:
             result = p.map_async(work, [None]*processCount)
             try:
-                dates = result.get(timeout=3600)
+                dates = result.get(timeout=4800)
             except multiprocessing.TimeoutError:
                 p.terminate()
                 p.join()
