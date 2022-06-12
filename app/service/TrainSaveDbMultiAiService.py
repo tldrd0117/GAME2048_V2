@@ -41,7 +41,7 @@ class TrainSaveDbMultiAiService(object):
             print(dirList)
             if len(dirList) <= 0:
                 break
-            for i in range(1):
+            for i in range(10):
                 simulateCount = simulateCount + 1
                 self.simulate()
             action, maxQ = self.selection(self.tableRepo.table, dirList, True)
@@ -89,30 +89,30 @@ class TrainSaveDbMultiAiService(object):
             node = self.tensorModelRepo.getNode(tableRepo.getCopyTable())
             dirList = tableRepo.getPossibleDirList()
             if len(dirList) > 0:
-                if gameRepo.turn / 2 > len(simulateMaxQ):
-                    action, maxQ = self.selection(tableRepo.getCopyTable(), dirList)
-                    if action == -1:
-                        idx = random.randrange(0,len(dirList))
-                        data = tableRepo.moveTable(dirList[idx])
-                        action = dirList[idx]
-                    else:
-                        data = tableRepo.moveTable(action)
-                        simulateMaxQ.append(maxQ)
-                else:
-                    val = random.randrange(0,2)
-                    if val == 0:
-                        idx = random.randrange(0,len(dirList))
-                        data = tableRepo.moveTable(dirList[idx])
-                        action = dirList[idx]
-                    else:
-                        action, maxQ = self.selection(tableRepo.getCopyTable(), dirList)
-                        if action == -1:
-                            idx = random.randrange(0,len(dirList))
-                            data = tableRepo.moveTable(dirList[idx])
-                            action = dirList[idx]
-                        else:
-                            data = tableRepo.moveTable(action)
-                            simulateMaxQ.append(maxQ)
+                # if gameRepo.turn / 2 > len(simulateMaxQ):
+                #     action, maxQ = self.selection(tableRepo.getCopyTable(), dirList)
+                #     if action == -1:
+                #         idx = random.randrange(0,len(dirList))
+                #         data = tableRepo.moveTable(dirList[idx])
+                #         action = dirList[idx]
+                #     else:
+                #         data = tableRepo.moveTable(action)
+                #         simulateMaxQ.append(maxQ)
+                # else:
+                #     val = random.randrange(0,2)
+                #     if val == 0:
+                idx = random.randrange(0,len(dirList))
+                data = tableRepo.moveTable(dirList[idx])
+                action = dirList[idx]
+                    # else:
+                    #     action, maxQ = self.selection(tableRepo.getCopyTable(), dirList)
+                    #     if action == -1:
+                    #         idx = random.randrange(0,len(dirList))
+                    #         data = tableRepo.moveTable(dirList[idx])
+                    #         action = dirList[idx]
+                    #     else:
+                    #         data = tableRepo.moveTable(action)
+                    #         simulateMaxQ.append(maxQ)
                 
                 if not data[0]:
                     print(tableRepo.table)

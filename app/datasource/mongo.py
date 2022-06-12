@@ -128,6 +128,9 @@ class MongoDataSource(object):
             limit = self.weights.find().sort([('createdAt', -1)]).limit(1)
             return pickle.loads(list(limit)[0]["data"])
         return None
+    
+    def getLosses(self):
+        return self.weights.find({},{"createdAt":1, "loss":1, "name":1})
 
 
 

@@ -110,6 +110,9 @@ class TensorMultitModelDbRepository(object):
     def updateMemoryFromDbRandom(self, startDate, size):
         self.memory = self.db.getSamplesRandom(startDate, size)
     
+    def getLosses(self):
+        return self.db.getLosses()
+    
     def updateTargetModel(self, weight):
         self.model.set_weights(weight)
         self.targetModel.set_weights(weight)

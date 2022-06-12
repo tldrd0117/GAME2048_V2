@@ -3,12 +3,27 @@ from repo.tree import TreeDbRepository
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
+from datasource.mongo import MongoDataSource
 
 tree = TreeDbRepository()
 
 data = tree.getGameInfo("TrainMultiAiServiceAverageLRChange")
+# data = tree.getGameInfo("TrainMultiAiServiceLRChange")
 print(f"Epoch Length:{len(data)}")
 
+db = MongoDataSource()
+
+
+def plotLosses():
+    mpl.style.use("default")
+    cursor = db.getLosses()
+    losses = []
+    for d in list(cursor):
+        losses.append(float(d["loss"]))
+    print(losses)
+    fig, ax = plt.subplots()
+    ax.plot(list(range(len(losses))), losses, label="loss")
+    plt.show()
 
 
 def toggle_plot(line):
@@ -87,7 +102,6 @@ def plot():
 
     plt.subplots_adjust(left=0.1, right=0.9, top=0.7, bottom=0.1)
     plt.show()
-plot()
 
 def getAverageByDay():
     def getAverage(li: List):
@@ -120,5 +134,6 @@ def getAverageByDay():
 
     for key in infoDict.keys():
         print(f"key: {key} data: {str(getAverage(infoDict[key]))}")
-
+plot()
+# plotLosses()
 # poetry run python app/main_state.py
