@@ -95,7 +95,7 @@ class MongoDataSource(object):
                 "$gte": date
             }
         })
-        return list(map(lambda d : pickle.loads(d["data"]), list(cursor)))
+        return list(map(lambda d : (pickle.loads(d["history"]), d["action"], d["reward"], pickle.loads(d["nextHistory"])), list(cursor)))
     
     def getSamplesBefore(self, date):
         cursor = self.samples.find({ \
@@ -103,7 +103,7 @@ class MongoDataSource(object):
                 "$lte": date
             }
         })
-        return list(map(lambda d : pickle.loads(d["data"]), list(cursor)))
+        return list(map(lambda d : (pickle.loads(d["history"]), d["action"], d["reward"], pickle.loads(d["nextHistory"])), list(cursor)))
     
     def getSamplesBetween(self, startDate, endDate):
         cursor = self.samples.find({ \
@@ -112,7 +112,7 @@ class MongoDataSource(object):
                 "$lte": endDate
             }
         })
-        return list(map(lambda d : pickle.loads(d["data"]), list(cursor)))
+        return list(map(lambda d : (pickle.loads(d["history"]), d["action"], d["reward"], pickle.loads(d["nextHistory"])), list(cursor)))
     
     def getSamplesRandom(self, startDate, size):
         cursor = self.samples.aggregate([

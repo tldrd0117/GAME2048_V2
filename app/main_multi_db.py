@@ -91,7 +91,7 @@ if __name__=='__main__':
             d = calDate(dates)
             print(d)
             p.map(train, [d])
-            for _ in range(3):
+            for _ in range(1):
                 p.map(train_old, [d])
             result = None
             dates = None
