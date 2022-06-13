@@ -16,6 +16,7 @@ import os
 from tensorflow.python.framework.ops import disable_eager_execution
 from filelock import FileLock
 from datasource.mongo import MongoDataSource
+import time
 
 class TableNode:
     table: List
@@ -220,6 +221,10 @@ class TensorMultitModelDbRepository(object):
 
     def appendSamples(self, tableNodes: List[TableNode]):
         for tableNode in tableNodes:
+            if tableNode.score > 0:
+                print(tableNode.parent)
+                print("score > 0")
+                time.sleep(3)
             if tableNode.parent is None:
                 continue
             historyTable = self.convertTable(tableNode.parent)
@@ -231,7 +236,7 @@ class TensorMultitModelDbRepository(object):
                 nextHistory = np.array(nextHisotryTable).flatten().reshape(4,4,16)
             else:
                 nextHistory = None
-            self.db.updateSamples((history, int(action), reward, nextHistory))
+            self.db.updateSamples((history, int(action), int(reward), nextHistory))
             historyTable = None
             nextHisotryTable = None
 

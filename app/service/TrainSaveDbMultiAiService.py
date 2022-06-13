@@ -10,6 +10,7 @@ import random
 import numpy as np
 import sys
 import datetime
+import time
 
 class TrainSaveDbMultiAiService(object):
     def __init__(self) -> None:
@@ -127,8 +128,10 @@ class TrainSaveDbMultiAiService(object):
 
                 childNode = self.tensorModelRepo.getNode(tableRepo.getCopyTable())
                 childNode.action = action
+                childNode.parent = node.table
                 # childNode.rootScore = rootScore
                 childNode.score = 1 if data[1] > 0 else 0
+
                 self.tensorModelRepo.appendSamples([childNode])
 
                 # isDup = False
@@ -149,12 +152,12 @@ class TrainSaveDbMultiAiService(object):
                     if dir not in dirList:
                         impossibleAction.append(dir)
                 for action in impossibleAction:
-                    childNode = self.tensorModelRepo.newNode()
-                    childNode.action = action
+                    newNode = self.tensorModelRepo.newNode()
+                    newNode.action = action
                     # childNode.rootScore = rootScore
-                    childNode.score = 0
-                    childNode.parent = node.table
-                    self.tensorModelRepo.appendSamples([childNode])
+                    newNode.score = 0
+                    newNode.parent = node.table
+                    self.tensorModelRepo.appendSamples([newNode])
             if len(dirList) <= 0:
                 break
         # self.backPropagation(tableRepo.table, gameRepo.score)

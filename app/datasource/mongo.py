@@ -70,7 +70,6 @@ class MongoDataSource(object):
     
     
     def updateSamples(self, sample):
-        data = pickle.dumps(sample)
         key = str(sample).encode('utf-8')
         md5 = hashlib.new("md5")
         md5.update(key)
