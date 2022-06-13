@@ -221,10 +221,6 @@ class TensorMultitModelDbRepository(object):
 
     def appendSamples(self, tableNodes: List[TableNode]):
         for tableNode in tableNodes:
-            if tableNode.score > 0:
-                print(tableNode.parent)
-                print("score > 0")
-                time.sleep(3)
             if tableNode.parent is None:
                 continue
             historyTable = self.convertTable(tableNode.parent)
