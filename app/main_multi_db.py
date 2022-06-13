@@ -51,6 +51,8 @@ def train_old(dates):
     tensor = TensorMultitModelDbRepository()
     tensor.loadModel()
     tensor.updateMemoryFromDbRandom(startDate, 500000)
+    if len(tensor.memory) < 400000:
+        return
     
     trainCount = int(len(tensor.memory) / (tensor.batch_size * 2) )
     print(len(tensor.memory))
@@ -89,7 +91,8 @@ if __name__=='__main__':
             d = calDate(dates)
             print(d)
             p.map(train, [d])
-            p.map(train_old, [d])
+            for _ in range(3):
+                p.map(train_old, [d])
             result = None
             dates = None
         
