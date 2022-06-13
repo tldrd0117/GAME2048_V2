@@ -5,6 +5,7 @@ from pymongo.collection import Collection
 from bson.binary import Binary
 import pickle
 import datetime
+import hashlib
 
 config = dotenv_values('.env')
 
@@ -70,12 +71,19 @@ class MongoDataSource(object):
     
     def updateSamples(self, sample):
         data = pickle.dumps(sample)
+        key = str(sample).encode('utf-8')
+        md5 = hashlib.new("md5")
+        md5.update(key)
+        key = md5.hexdigest()
         self.samples.update_one({
-            "key": str(sample),
+            "key": key,
         }, {
             "$set": {
-                "key": str(sample),
-                "data": Binary(data),
+                "key": key,
+                "history": pickle.dumps(sample[0]),
+                "action": sample[1],
+                "reward": sample[2],
+                "nextHistory": pickle.dumps(sample[3]),
                 "createdAt": datetime.datetime.now()
             },
         }, upsert=True)
@@ -111,7 +119,8 @@ class MongoDataSource(object):
             {"$match": { "createdAt": { "$lte": startDate }}},
             {"$sample": { "size": size } }
         ], allowDiskUse=True)
-        return list(map(lambda d : pickle.loads(d["data"]), list(cursor)))
+        
+        return list(map(lambda d : (pickle.loads(d["history"]), d["action"], d["reward"], pickle.loads(d["nextHistory"])), list(cursor)))
     
     def saveWeight(self, name, weight, loss):
         data = pickle.dumps(weight)

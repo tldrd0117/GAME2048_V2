@@ -7,8 +7,8 @@ from datasource.mongo import MongoDataSource
 
 tree = TreeDbRepository()
 
-data = tree.getGameInfo("TrainMultiAiServiceAverageLRChange")
-# data = tree.getGameInfo("TrainMultiAiServiceLRChange")
+# data = tree.getGameInfo("TrainMultiAiServiceAverageLRChange")
+data = tree.getGameInfo("TrainMultiAiServiceLRChange")
 print(f"Epoch Length:{len(data)}")
 
 db = MongoDataSource()
@@ -134,6 +134,6 @@ def getAverageByDay():
 
     for key in infoDict.keys():
         print(f"key: {key} data: {str(getAverage(infoDict[key]))}")
-plot()
-# plotLosses()
+# plot()
+plotLosses()
 # poetry run python app/main_state.py
