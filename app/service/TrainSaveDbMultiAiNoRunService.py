@@ -55,7 +55,7 @@ class TrainSaveDbMultiAiService(object):
                 print(str(self.tensorModelRepo.memorySize))
                 length = self.tensorModelRepo.memorySize
 
-            if self.tensorModelRepo.memorySize > 50000:
+            if self.tensorModelRepo.memorySize > 5000:
                 break
         # action, maxQ = self.selection(self.tableRepo.table, dirList, True)
         # if action == -1:
@@ -101,19 +101,19 @@ class TrainSaveDbMultiAiService(object):
             node = self.tensorModelRepo.getNode(tableRepo.getCopyTable())
             dirList = tableRepo.getPossibleDirList()
             # if len(dirList) > 0:
-            if random.random() < self.currentCount / self.episodeCount:
+            if random.random() < 0.5 + (self.currentCount / self.episodeCount)/2:
                 action, maxQ, isAction = self.selection(tableRepo.getCopyTable(), dirList)
                 if isAction == False:
                     childNode = self.tensorModelRepo.newNode()
                     if action < 2:
                         childNode.action = action
                         childNode.parent = node.table
-                        childNode.score = -100
+                        childNode.score = -0.1
                         self.tensorModelRepo.appendSamples([childNode])
                     else:
                         childNode.action = action - 2
                         childNode.parent = self.tableRepo.getRotateTableCounterClockWise(tableRepo.getCopyTable())
-                        childNode.score = -100
+                        childNode.score = -0.1
                         self.tensorModelRepo.appendSamples([childNode])
 
                     break
@@ -126,12 +126,12 @@ class TrainSaveDbMultiAiService(object):
                     if action < 2:
                         childNode.action = action
                         childNode.parent = node.table
-                        childNode.score = -100
+                        childNode.score = -0.1
                         self.tensorModelRepo.appendSamples([childNode])
                     else:
                         childNode.action = action - 2
                         childNode.parent = self.tableRepo.getRotateTableCounterClockWise(tableRepo.getCopyTable())
-                        childNode.score = -100
+                        childNode.score = -0.1
                         self.tensorModelRepo.appendSamples([childNode])
                     break
                 
@@ -151,7 +151,7 @@ class TrainSaveDbMultiAiService(object):
                 childNode.action = action
                 childNode.parent = node.table
                 # childNode.rootScore = rootScore
-                childNode.score = 1 if data[1] > 0 else 0
+                childNode.score = (0.01 * gameRepo.turn) if data[1] > 0 else 0.01
 
                 self.tensorModelRepo.appendSamples([childNode])
             else:
@@ -159,7 +159,7 @@ class TrainSaveDbMultiAiService(object):
                 childNode.action = action - 2
                 childNode.parent = self.tableRepo.getRotateTableCounterClockWise(node.table)
                 # childNode.rootScore = rootScore
-                childNode.score = 1 if data[1] > 0 else 0
+                childNode.score = (0.01 * gameRepo.turn )if data[1] > 0 else 0.01
 
                 self.tensorModelRepo.appendSamples([childNode])
 

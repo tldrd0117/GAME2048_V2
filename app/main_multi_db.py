@@ -88,7 +88,7 @@ if __name__=='__main__':
     start = int(time.time())
     procs = []
     processCount = 5
-    episodeCount = 200
+    episodeCount = 100
     weight = None
     for i in range(0,episodeCount):
         with Pool(processes=processCount) as p:

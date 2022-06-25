@@ -12,7 +12,6 @@ import gc
 from multiprocessing import Lock, Process, freeze_support, Queue, Manager, Pool
 import time
 import tensorflow as tf
-from work import work
 import tracemalloc
 
 sys.setrecursionlimit(10000)

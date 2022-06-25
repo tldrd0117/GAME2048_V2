@@ -154,6 +154,24 @@ class MongoDataSource(object):
         
         return list(map(lambda d : (pickle.loads(d["history"]), d["action"], d["reward"], pickle.loads(d["nextHistory"]), pickle.loads(d["nextHistoryCounterClockwise"])), sample))
     
+    
+    def getSamplesRandomByActionAndReward(self, startDate, action, reward, size):
+        start = int(time.time())
+        print("***find start")
+        cursor = self.samples.find({
+            "action": action, 
+            "reward": reward ,
+            "createdAt": { "$lte": startDate }
+        })
+        sample = random.sample(list(cursor), size)
+        print("***getSamplesRandomByActionAndReward time(sec) :", int(time.time()) - start)
+        # cursor = self.samples.aggregate([
+        #     {"$match": { "action": action, "reward": reward ,"createdAt": { "$lte": startDate }}},
+        #     {"$sample": { "size": size } }
+        # ], allowDiskUse=True)
+        
+        return list(map(lambda d : (pickle.loads(d["history"]), d["action"], d["reward"], pickle.loads(d["nextHistory"])), sample))
+    
     def saveWeight(self, name, weight, loss):
         data = pickle.dumps(weight)
         id = self.weightsFs.put(data)

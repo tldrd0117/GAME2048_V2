@@ -23,7 +23,7 @@ class TableNode:
     table: List
     action: int = -1
     parent: str = None
-    score: int = 0
+    score: float = 0
     def print(self):
         print("table")
         for row in range(0,4):
@@ -42,7 +42,7 @@ class TensorMultitModelDbRepository(object):
         self.state_size = (64,4,1,)
         self.action_size = 2
         self.batch_size = 2048
-        self.discount_factor = 0.99
+        self.discount_factor = 0.1
         self.memorySize = 0
 
         self.epsilon = 1.
@@ -202,7 +202,7 @@ class TensorMultitModelDbRepository(object):
         linear_part = error - quadratic_part
         loss = K.mean(0.5 * K.square(quadratic_part) + linear_part)
 
-        rms = RMSprop(lr=0.0001, epsilon=0.01)
+        rms = RMSprop(lr=0.001, epsilon=0.01)
         updates = rms.get_updates(loss, self.model.trainable_weights)
         train = K.function([self.model.input, a, y], [loss], updates=updates)
 
@@ -289,12 +289,12 @@ class TensorMultitModelDbRepository(object):
                 nextHistory = None
                 nextHistoryCounterClockwise = None
             self.memorySize = self.memorySize + 1
-            self.db.updateSamples((history, int(action), int(reward), nextHistory, nextHistoryCounterClockwise))
+            self.db.updateSamples((history, int(action), float(reward), nextHistory, nextHistoryCounterClockwise))
             historyTable = None
             nextHisotryTable = None
 
     def trainModel(self):
-        if len(self.memory) < 10000:
+        if len(self.memory) < 5000:
             return
         if self.epsilon > self.epsilon_end:
             self.epsilon -= self.epsilon_decay_step

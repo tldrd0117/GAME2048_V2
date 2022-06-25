@@ -21,9 +21,9 @@ def plotLosses():
     for d in list(cursor):
         losses.append(float(d["loss"]))
     print(losses)
-    fig, ax = plt.subplots()
+    ax = plt.subplot(1,2,2)
     ax.plot(list(range(len(losses))), losses, label="loss")
-    plt.show()
+    # plt.show()
 
 
 def toggle_plot(line):
@@ -89,7 +89,7 @@ def plot():
             maxQ.append(one["maxQ"])
         else:
             maxQ.append(0)
-    fig, ax = plt.subplots()
+    ax = plt.subplot(1,2,1)
     ax2 = ax.twinx()
     y = range(len(data))
     btns, lines = averagePlot(ax, y, maxQ, "maxQ", 0)
@@ -98,8 +98,6 @@ def plot():
     applyEvent(btns, lines)
     applyEvent(btns2, lines2)
     applyEvent(btns3, lines3)
-    
-
     plt.subplots_adjust(left=0.1, right=0.9, top=0.7, bottom=0.1)
     plt.show()
 
@@ -134,6 +132,8 @@ def getAverageByDay():
 
     for key in infoDict.keys():
         print(f"key: {key} data: {str(getAverage(infoDict[key]))}")
-# plot()
 plotLosses()
+plot()
+
+# plt.show()
 # poetry run python app/main_state.py

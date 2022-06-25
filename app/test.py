@@ -5,6 +5,7 @@ from datasource.mongo import MongoDataSource
 import datetime
 
 mongo = MongoDataSource()
-samples = mongo.getSamplesRandom(datetime.datetime.now(),10)
+samples = mongo.getSamplesRandomByAction(datetime.datetime.now(), 1, 50000)
 print(samples)
+print(len(samples))
 # poetry run python app/test.py
