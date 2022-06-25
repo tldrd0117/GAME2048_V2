@@ -7,7 +7,8 @@ from service.RandomAiService import RandomAiService
 from service.MCTSAiService import MCTSAiService
 from service.MCTSRunAiService import MCTSRunAiService
 from service.TrainAiService import TrainAiService
-from service.TrainSaveDbMultiAiService import TrainSaveDbMultiAiService
+from service.TrainSaveDbMultiAiNoRunService import TrainSaveDbMultiAiService
+from service.TrainTestService import TrainTestService
 from repo.tensor_multi_db import TensorMultitModelDbRepository
 import sys
 import gc
@@ -20,7 +21,7 @@ import datetime
 sys.setrecursionlimit(10000)
 
 def work(d):
-    ai = TrainSaveDbMultiAiService()
+    ai = TrainSaveDbMultiAiService(d[0],d[1])
     return ai.run()
 
 def train(dates):
@@ -32,7 +33,7 @@ def train(dates):
     tensor.loadModel()
     tensor.updateMemoryFromDb(startDate, endDate)
     
-    trainCount = int(len(tensor.memory) / (tensor.batch_size * 2) )
+    trainCount = int(len(tensor.memory) / (tensor.batch_size ) )
     print(len(tensor.memory))
     for i in range(trainCount):
         print(f"train: {i}")
@@ -43,14 +44,25 @@ def train(dates):
         print(f"loss: {avgLoss}")
     tensor.saveModel("multi_db_init", avgLoss)
 
+
+def test(d):
+    ai = TrainTestService()
+    return ai.run()
+
+
+
 def train_old(dates):
-    print("train old")
     startDate = dates[0]
     endDate = dates[1]
+    print(f"train old")
 
     tensor = TensorMultitModelDbRepository()
     tensor.loadModel()
-    tensor.updateMemoryFromDbRandom(startDate, 500000)
+
+    for action in range(4):
+        for reward in range(2):
+            tensor.updateSamplesRandomByActionAndReward(startDate, action, reward, 50000)
+    print(f"length: {str(len(tensor.memory))}")
     if len(tensor.memory) < 400000:
         return
     
@@ -63,7 +75,7 @@ def train_old(dates):
     avgLoss = str(sum(losses)/len(losses)) if len(losses) > 0 else 0
     if len(losses) > 0:
         print(f"loss: {avgLoss}")
-    tensor.saveModel("multi_db_init_old", avgLoss)
+    tensor.saveModel(f"multi_db_init_old", avgLoss)
 
 def calDate(dateList):
     if len(dateList) <= 0:
@@ -75,11 +87,13 @@ if __name__=='__main__':
     # freeze_support()
     start = int(time.time())
     procs = []
-    processCount = 3
+    processCount = 5
+    episodeCount = 200
     weight = None
-    for _ in range(1000):
+    for i in range(0,episodeCount):
         with Pool(processes=processCount) as p:
-            result = p.map_async(work, [None]*processCount)
+            p.map(test, [None])
+            result = p.map_async(work, [(episodeCount,i)]*processCount)
             try:
                 dates = result.get(timeout=4800)
             except multiprocessing.TimeoutError:
@@ -91,8 +105,7 @@ if __name__=='__main__':
             d = calDate(dates)
             print(d)
             p.map(train, [d])
-            for _ in range(1):
-                p.map(train_old, [d])
+            # p.map(train_old, [d])
             result = None
             dates = None
         

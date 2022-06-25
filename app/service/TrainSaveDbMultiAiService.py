@@ -13,7 +13,7 @@ import datetime
 import time
 
 class TrainSaveDbMultiAiService(object):
-    def __init__(self) -> None:
+    def __init__(self, episodeCount, currentCount) -> None:
         self.tableRepo = TableRepository()
         self.gameRepo = GameRepository()
         self.treeRepo = TreeDbRepository()
@@ -25,6 +25,8 @@ class TrainSaveDbMultiAiService(object):
         self.simulatePredictedActions = []
         self.turns = []
         self.scores = []
+        self.episodeCount = episodeCount
+        self.currentCount = currentCount
 
 
     def averageList(li):
@@ -47,9 +49,10 @@ class TrainSaveDbMultiAiService(object):
                 self.simulate()
             action, maxQ = self.selection(self.tableRepo.table, dirList, True)
             if action == -1:
-                print("-1")
-                idx = random.randrange(0,len(dirList))
-                action = dirList[idx]
+                break
+                # print("-1")
+                # idx = random.randrange(0,len(dirList))
+                # action = dirList[idx]
             else:
                 self.maxQ.append(maxQ)
             print(f"action: {str(action)}")
@@ -64,7 +67,7 @@ class TrainSaveDbMultiAiService(object):
         print("end")
         self.tableRepo.printTable()
 
-        averageMaxQ = sum(self.maxQ) / len(self.maxQ)
+        averageMaxQ = sum(self.maxQ) / len(self.maxQ) if len(self.maxQ) > 0 else 0
         unique1, count1 = np.unique(np.array(self.predictedActions), return_counts=True)
         actions = dict(zip(unique1, count1))
         averageScores = sum(self.scores) / len(self.scores)
@@ -102,9 +105,16 @@ class TrainSaveDbMultiAiService(object):
                 # else:
                 #     val = random.randrange(0,2)
                 #     if val == 0:
-                idx = random.randrange(0,len(dirList))
-                data = tableRepo.moveTable(dirList[idx])
-                action = dirList[idx]
+                if random.random() < self.currentCount / self.episodeCount:
+                    action, maxQ = self.selection(tableRepo.getCopyTable(), dirList)
+                    if action == -1:
+                        break
+                    data = tableRepo.moveTable(action)
+                    simulateMaxQ.append(maxQ)
+                else:
+                    idx = random.randrange(0,len(dirList))
+                    data = tableRepo.moveTable(dirList[idx])
+                    action = dirList[idx]
                     # else:
                     #     action, maxQ = self.selection(tableRepo.getCopyTable(), dirList)
                     #     if action == -1:
@@ -176,13 +186,17 @@ class TrainSaveDbMultiAiService(object):
             self.predictedActions.append(np.argmax(nextChildQValue))
         else:
             self.simulatePredictedActions.append(np.argmax(nextChildQValue))
-        sortValue = list(np.argsort(nextChildQValue))
-        for i in reversed(range(0,4)):
-            a = sortValue[i]
-            if a in dirList:
-                action = a
-                break
+        sortValue = list(np.argsort(-nextChildQValue))
+        if sortValue[0] in dirList:
+            action = sortValue[0]
         return action, maxQ
+        # sortValue = list(np.argsort(nextChildQValue))
+        # for i in reversed(range(0,4)):
+        #     a = sortValue[i]
+        #     if a in dirList:
+        #         action = a
+        #         break
+        # return action, maxQ
 
 
     def backPropagation(self, table: List, score: int):

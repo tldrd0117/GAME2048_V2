@@ -121,7 +121,12 @@ class TableRepository(object):
         # print(str(str(before) != str(self.table)))
         return [str(before) != str(self.table), mergeCount]
         
-
+    def getRotateTableCounterClockWise(self, table):
+        result = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]]
+        for row in range(0,4):
+            for col in range(0,4):
+                result[row][col]=table[col][3-row]
+        return result
 
     def rotateTableClockWise(self):
         result = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]]

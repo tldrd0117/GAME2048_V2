@@ -15,6 +15,7 @@ from collections import deque
 import os
 from tensorflow.python.framework.ops import disable_eager_execution
 from filelock import FileLock
+from repo.table import TableRepository
 from datasource.mongo import MongoDataSource
 import time
 
@@ -33,14 +34,16 @@ class TableNode:
 class TensorMultitModelDbRepository(object):
     nodes = {}
     losses = []
-    memory: Deque = deque(maxlen=500000)
+    memory: List = []
     def __init__(self) -> None:
         self.db = MongoDataSource()
+        self.tableRepo = TableRepository()
         disable_eager_execution()
-        self.state_size = (4,4,16,)
-        self.action_size = 4
+        self.state_size = (64,4,1,)
+        self.action_size = 2
         self.batch_size = 2048
         self.discount_factor = 0.99
+        self.memorySize = 0
 
         self.epsilon = 1.
         self.epsilon_start, self.epsilon_end = 1.0, 0.1
@@ -55,7 +58,7 @@ class TensorMultitModelDbRepository(object):
         # 텐서보드 설정
         graph = tf.compat.v1.get_default_graph()
         config = tf.compat.v1.ConfigProto()
-        config.gpu_options.per_process_gpu_memory_fraction = 0.1
+        config.gpu_options.per_process_gpu_memory_fraction = 0.125
         # config.gpu_options.allow_growth = True
         # config.log_device_placement = True
 
@@ -111,6 +114,12 @@ class TensorMultitModelDbRepository(object):
     def updateMemoryFromDbRandom(self, startDate, size):
         self.memory = self.db.getSamplesRandom(startDate, size)
     
+    def updateMemoryFromDbRandomByAction(self, startDate, action, size):
+        self.memory = self.db.getSamplesRandomByAction(startDate, action, size)
+    
+    def updateSamplesRandomByActionAndReward(self, startDate, action, reward, size):
+        self.memory = self.memory + self.db.getSamplesRandomByActionAndReward(startDate, action, reward, size)
+    
     def getLosses(self):
         return self.db.getLosses()
     
@@ -119,16 +128,60 @@ class TensorMultitModelDbRepository(object):
         self.targetModel.set_weights(weight)
         print(self.model.get_weights())
 
-
     def buildModel(self):
-        model = Sequential()
-        model.add(Conv2D(32, (2, 2), padding='same', strides=(1, 1), activation='relu', kernel_regularizer=l2(0.01) , input_shape=self.state_size))
-        model.add(Conv2D(64, (2, 2), padding='same', strides=(1, 1), activation='relu', kernel_regularizer=l2(0.01)))
-        model.add(Conv2D(64, (2, 2), padding='same', strides=(1, 1), activation='relu', kernel_regularizer=l2(0.01)))
-        model.add(Flatten())
-        model.add(Dense(256, activation="relu"))
-        model.add(Dense(64, activation="relu"))
-        model.add(Dense(4, activation="relu"))
+        model1 = Sequential()
+        model1.add(Conv2D(64, (16, 1), padding='valid', strides=(16, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() , input_shape=self.state_size))
+        model1.add(Conv2D(64, (4, 4), padding='valid', strides=(1, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() ))
+        model1.add(Flatten())
+
+        model2 = Sequential()
+        model2.add(Conv2D(64, (16, 1), padding='valid', strides=(16, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() , input_shape=self.state_size))
+        model2.add(Conv2D(64, (3, 3), padding='valid', strides=(1, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() ))
+        model2.add(Flatten())
+
+        model3 = Sequential()
+        model3.add(Conv2D(64, (16, 1), padding='valid', strides=(16, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() , input_shape=self.state_size))
+        model3.add(Conv2D(64, (2, 2), padding='valid', strides=(1, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() ))
+        model3.add(Flatten())
+
+        model4 = Sequential()
+        model4.add(Conv2D(64, (16, 1), padding='valid', strides=(16, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() , input_shape=self.state_size))
+        model4.add(Conv2D(64, (2, 1), padding='valid', strides=(1, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() ))
+        model4.add(Flatten())
+
+        model5 = Sequential()
+        model5.add(Conv2D(64, (16, 1), padding='valid', strides=(16, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() , input_shape=self.state_size))
+        model5.add(Conv2D(64, (1, 2), padding='valid', strides=(1, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() ))
+        model5.add(Flatten())
+
+        model6 = Sequential()
+        model6.add(Conv2D(64, (16, 1), padding='valid', strides=(16, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() , input_shape=self.state_size))
+        model6.add(Conv2D(64, (3, 1), padding='valid', strides=(1, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() ))
+        model6.add(Flatten())
+
+        model7 = Sequential()
+        model7.add(Conv2D(64, (16, 1), padding='valid', strides=(16, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() , input_shape=self.state_size))
+        model7.add(Conv2D(64, (1, 3), padding='valid', strides=(1, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() ))
+        model7.add(Flatten())
+
+        model8 = Sequential()
+        model8.add(Conv2D(64, (16, 1), padding='valid', strides=(16, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() , input_shape=self.state_size))
+        model8.add(Conv2D(64, (1, 4), padding='valid', strides=(1, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() ))
+        model8.add(Flatten())
+
+        model9 = Sequential()
+        model9.add(Conv2D(64, (16, 1), padding='valid', strides=(16, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() , input_shape=self.state_size))
+        model9.add(Conv2D(64, (4, 1), padding='valid', strides=(16, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() ))
+        model9.add(Flatten())
+
+        modelConcat = concatenate([model1.output, model2.output, model3.output, model4.output, model5.output, model6.output, model7.output, model8.output, model9.output])
+
+        modelConcat = Flatten()(modelConcat)
+        modelConcat = Dense(1024, activation="relu", kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeUniform())(modelConcat)
+        modelConcat = Dense(128, activation="relu", kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeUniform())(modelConcat)
+        modelConcat = Dense(2, activation="relu", kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeUniform())(modelConcat)
+
+        model = Model(inputs=[model1.input, model2.input, model3.input, model4.input, model5.input, model6.input, model7.input, model8.input, model9.input], outputs=[modelConcat])
         model.summary()
         return model
     
@@ -167,8 +220,8 @@ class TensorMultitModelDbRepository(object):
     
     def getActionPredicted(self, history):
         histTable = self.convertTable(history)
-        hist = np.array(histTable).flatten().reshape(1,4,4,16)
-        q_value = self.model.predict(hist)
+        hist = np.array(histTable).flatten().reshape(1,64,4,1)
+        q_value = self.model.predict([hist]*9)
         histTable = None
         return q_value
 
@@ -224,15 +277,19 @@ class TensorMultitModelDbRepository(object):
             if tableNode.parent is None:
                 continue
             historyTable = self.convertTable(tableNode.parent)
-            history = np.array(historyTable).flatten().reshape(4,4,16)
+            history = np.array(historyTable).flatten().reshape(64,4,1)
             action = tableNode.action
             reward = tableNode.score
             if len(tableNode.table) > 0:
                 nextHisotryTable = self.convertTable(tableNode.table)
-                nextHistory = np.array(nextHisotryTable).flatten().reshape(4,4,16)
+                nextHistoryCounterClockwiseTable = self.convertTable(self.tableRepo.getRotateTableCounterClockWise(tableNode.table))
+                nextHistory = np.array(nextHisotryTable).flatten().reshape(64,4,1)
+                nextHistoryCounterClockwise = np.array(nextHistoryCounterClockwiseTable).flatten().reshape(64,4,1)
             else:
                 nextHistory = None
-            self.db.updateSamples((history, int(action), int(reward), nextHistory))
+                nextHistoryCounterClockwise = None
+            self.memorySize = self.memorySize + 1
+            self.db.updateSamples((history, int(action), int(reward), nextHistory, nextHistoryCounterClockwise))
             historyTable = None
             nextHisotryTable = None
 
@@ -243,27 +300,31 @@ class TensorMultitModelDbRepository(object):
             self.epsilon -= self.epsilon_decay_step
         mini_batch = random.sample(self.memory, self.batch_size)
 
-        history = np.zeros((self.batch_size, 4,4,16))
-        next_history = np.zeros((self.batch_size, 4,4,16))
+        history = np.zeros((self.batch_size, 64,4,1))
+        next_history = np.zeros((self.batch_size, 64,4,1))
+        nextHistoryClockWise = np.zeros((self.batch_size, 64,4,1))
         target = np.zeros((self.batch_size,))
         action, reward = [], []
 
         for i in range(self.batch_size):
             history[i] = np.float32(mini_batch[i][0])
             next_history[i] = np.float32(mini_batch[i][3])
+            nextHistoryClockWise[i] = np.float32(mini_batch[i][4])
             action.append(mini_batch[i][1])
             reward.append(mini_batch[i][2])
 
-        target_value = self.targetModel.predict(next_history)
+        target_value1 = self.targetModel.predict([next_history]*9)
+        target_value2 = self.targetModel.predict([nextHistoryClockWise]*9)
+        target_value = target_value1 + target_value2
 
         for i in range(self.batch_size):
-            if next_history[i] is None:
+            if next_history[i] is None and nextHistoryClockWise[i] is None:
                 target[i] = reward[i]
             else:
                 target[i] = reward[i] + self.discount_factor * \
                                     np.amax(target_value[i])
 
-        loss = self.optimizer([history, action, target])
+        loss = self.optimizer([[history]*9, action, target])
         self.avg_loss += loss[0]
         self.losses.append(loss[0])
         return loss

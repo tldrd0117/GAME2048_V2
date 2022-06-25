@@ -6,6 +6,9 @@ from bson.binary import Binary
 import pickle
 import datetime
 import hashlib
+import random
+import time
+import gridfs
 
 config = dotenv_values('.env')
 
@@ -18,6 +21,10 @@ class MongoDataSource(object):
         password = config["mongodbPassword"]
         path = f'mongodb://{userName}:{password}@{host}:{port}'
         self.client = MongoClient(path)
+
+        self.gridFs = self.client["gridFs"]
+        self.weightsFs = gridfs.GridFS(self.gridFs, "weightsFs")
+
         self.nodes: Collection = self.client["game2048"]["nodes"]
         self.nodes.create_index([("key", ASCENDING)], unique=True, name="nodeIndex")
         self.gameinfo: Collection = self.client["game2048"]["gameinfo"]
@@ -25,6 +32,7 @@ class MongoDataSource(object):
         self.samples: Collection = self.client["game2048"]["samples"]
         self.samples.create_index([("key", ASCENDING)], unique=True, name="sampleIndex")
         self.samples.create_index([("createdAt", DESCENDING)], unique=False, name="sampleIndexDate")
+        self.samples.create_index([("createdAt", DESCENDING), ("reward", ASCENDING), ("action", ASCENDING)], unique=False, name="sampleIndexDateRewardAction")
 
         self.weights: Collection = self.client["game2048"]["weights"]
         self.weights.create_index([("createdAt", DESCENDING)], unique=True, name="weightIndex")
@@ -83,6 +91,7 @@ class MongoDataSource(object):
                 "action": sample[1],
                 "reward": sample[2],
                 "nextHistory": pickle.dumps(sample[3]),
+                "nextHistoryCounterClockwise": pickle.dumps(sample[4]),
                 "createdAt": datetime.datetime.now()
             },
         }, upsert=True)
@@ -94,7 +103,7 @@ class MongoDataSource(object):
                 "$gte": date
             }
         })
-        return list(map(lambda d : (pickle.loads(d["history"]), d["action"], d["reward"], pickle.loads(d["nextHistory"])), list(cursor)))
+        return list(map(lambda d : (pickle.loads(d["history"]), d["action"], d["reward"], pickle.loads(d["nextHistory"]), pickle.loads(d["nextHistoryCounterClockwise"])), list(cursor)))
     
     def getSamplesBefore(self, date):
         cursor = self.samples.find({ \
@@ -102,7 +111,7 @@ class MongoDataSource(object):
                 "$lte": date
             }
         })
-        return list(map(lambda d : (pickle.loads(d["history"]), d["action"], d["reward"], pickle.loads(d["nextHistory"])), list(cursor)))
+        return list(map(lambda d : (pickle.loads(d["history"]), d["action"], d["reward"], pickle.loads(d["nextHistory"]), pickle.loads(d["nextHistoryCounterClockwise"])), list(cursor)))
     
     def getSamplesBetween(self, startDate, endDate):
         cursor = self.samples.find({ \
@@ -111,21 +120,46 @@ class MongoDataSource(object):
                 "$lte": endDate
             }
         })
-        return list(map(lambda d : (pickle.loads(d["history"]), d["action"], d["reward"], pickle.loads(d["nextHistory"])), list(cursor)))
+        return list(map(lambda d : (pickle.loads(d["history"]), d["action"], d["reward"], pickle.loads(d["nextHistory"]), pickle.loads(d["nextHistoryCounterClockwise"])), list(cursor)))
     
     def getSamplesRandom(self, startDate, size):
         cursor = self.samples.aggregate([
             {"$match": { "createdAt": { "$lte": startDate }}},
             {"$sample": { "size": size } }
         ], allowDiskUse=True)
+    
+    def getSamplesRandomByAction(self, startDate, action, size):
+        cursor = self.samples.aggregate([
+            {"$match": { "action": action ,"createdAt": { "$lte": startDate }}},
+            {"$sample": { "size": size } }
+        ], allowDiskUse=True)
         
-        return list(map(lambda d : (pickle.loads(d["history"]), d["action"], d["reward"], pickle.loads(d["nextHistory"])), list(cursor)))
+        return list(map(lambda d : (pickle.loads(d["history"]), d["action"], d["reward"], pickle.loads(d["nextHistory"]), pickle.loads(d["nextHistoryCounterClockwise"])), list(cursor)))
+    
+    
+    def getSamplesRandomByActionAndReward(self, startDate, action, reward, size):
+        start = int(time.time())
+        print("***find start")
+        cursor = self.samples.find({
+            "action": action, 
+            "reward": reward ,
+            "createdAt": { "$lte": startDate }
+        })
+        sample = random.sample(list(cursor), size)
+        print("***getSamplesRandomByActionAndReward time(sec) :", int(time.time()) - start)
+        # cursor = self.samples.aggregate([
+        #     {"$match": { "action": action, "reward": reward ,"createdAt": { "$lte": startDate }}},
+        #     {"$sample": { "size": size } }
+        # ], allowDiskUse=True)
+        
+        return list(map(lambda d : (pickle.loads(d["history"]), d["action"], d["reward"], pickle.loads(d["nextHistory"]), pickle.loads(d["nextHistoryCounterClockwise"])), sample))
     
     def saveWeight(self, name, weight, loss):
         data = pickle.dumps(weight)
+        id = self.weightsFs.put(data)
         self.weights.insert_one({
             "name": name,
-            "data": Binary(data),
+            "dataId": id,
             "createdAt": datetime.datetime.now(),
             "loss": loss
         })
@@ -133,8 +167,9 @@ class MongoDataSource(object):
     def getLastWeight(self):
         cursor = self.weights.find()
         if len(list(cursor)) > 0:
-            limit = self.weights.find().sort([('createdAt', -1)]).limit(1)
-            return pickle.loads(list(limit)[0]["data"])
+            c = self.weights.find().sort([('createdAt', -1)]).limit(1)
+            fileId = list(c)[0]["dataId"]
+            return pickle.loads(self.weightsFs.get(fileId).read())
         return None
     
     def getLosses(self):
