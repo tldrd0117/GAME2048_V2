@@ -58,7 +58,7 @@ class TensorMultitModelDbRepository(object):
         # 텐서보드 설정
         graph = tf.compat.v1.get_default_graph()
         config = tf.compat.v1.ConfigProto()
-        config.gpu_options.per_process_gpu_memory_fraction = 0.125
+        config.gpu_options.per_process_gpu_memory_fraction = 0.2
         # config.gpu_options.allow_growth = True
         # config.log_device_placement = True
 
@@ -131,54 +131,53 @@ class TensorMultitModelDbRepository(object):
     def buildModel(self):
         model1 = Sequential()
         model1.add(Conv2D(64, (16, 1), padding='valid', strides=(16, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() , input_shape=self.state_size))
-        model1.add(Conv2D(64, (4, 4), padding='valid', strides=(1, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() ))
+        model1.add(Conv2D(128, (4, 4), padding='valid', strides=(1, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() ))
         model1.add(Flatten())
 
         model2 = Sequential()
         model2.add(Conv2D(64, (16, 1), padding='valid', strides=(16, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() , input_shape=self.state_size))
-        model2.add(Conv2D(64, (3, 3), padding='valid', strides=(1, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() ))
+        model2.add(Conv2D(128, (3, 3), padding='valid', strides=(1, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() ))
         model2.add(Flatten())
 
         model3 = Sequential()
         model3.add(Conv2D(64, (16, 1), padding='valid', strides=(16, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() , input_shape=self.state_size))
-        model3.add(Conv2D(64, (2, 2), padding='valid', strides=(1, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() ))
+        model3.add(Conv2D(128, (2, 2), padding='valid', strides=(1, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() ))
         model3.add(Flatten())
 
         model4 = Sequential()
         model4.add(Conv2D(64, (16, 1), padding='valid', strides=(16, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() , input_shape=self.state_size))
-        model4.add(Conv2D(64, (2, 1), padding='valid', strides=(1, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() ))
+        model4.add(Conv2D(128, (2, 1), padding='valid', strides=(1, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() ))
         model4.add(Flatten())
 
         model5 = Sequential()
         model5.add(Conv2D(64, (16, 1), padding='valid', strides=(16, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() , input_shape=self.state_size))
-        model5.add(Conv2D(64, (1, 2), padding='valid', strides=(1, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() ))
+        model5.add(Conv2D(128, (1, 2), padding='valid', strides=(1, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() ))
         model5.add(Flatten())
 
         model6 = Sequential()
         model6.add(Conv2D(64, (16, 1), padding='valid', strides=(16, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() , input_shape=self.state_size))
-        model6.add(Conv2D(64, (3, 1), padding='valid', strides=(1, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() ))
+        model6.add(Conv2D(128, (3, 1), padding='valid', strides=(1, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() ))
         model6.add(Flatten())
 
         model7 = Sequential()
         model7.add(Conv2D(64, (16, 1), padding='valid', strides=(16, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() , input_shape=self.state_size))
-        model7.add(Conv2D(64, (1, 3), padding='valid', strides=(1, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() ))
+        model7.add(Conv2D(128, (1, 3), padding='valid', strides=(1, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() ))
         model7.add(Flatten())
 
         model8 = Sequential()
         model8.add(Conv2D(64, (16, 1), padding='valid', strides=(16, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() , input_shape=self.state_size))
-        model8.add(Conv2D(64, (1, 4), padding='valid', strides=(1, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() ))
+        model8.add(Conv2D(128, (1, 4), padding='valid', strides=(1, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() ))
         model8.add(Flatten())
 
         model9 = Sequential()
         model9.add(Conv2D(64, (16, 1), padding='valid', strides=(16, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() , input_shape=self.state_size))
-        model9.add(Conv2D(64, (4, 1), padding='valid', strides=(16, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() ))
+        model9.add(Conv2D(128, (4, 1), padding='valid', strides=(16, 1), activation='relu', kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeNormal() ))
         model9.add(Flatten())
 
         modelConcat = concatenate([model1.output, model2.output, model3.output, model4.output, model5.output, model6.output, model7.output, model8.output, model9.output])
 
         modelConcat = Flatten()(modelConcat)
-        modelConcat = Dense(1024, activation="relu", kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeUniform())(modelConcat)
-        modelConcat = Dense(128, activation="relu", kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeUniform())(modelConcat)
+        modelConcat = Dense(2048, activation="relu", kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeUniform())(modelConcat)
         modelConcat = Dense(2, activation="relu", kernel_regularizer=l2(0.001), kernel_initializer=tf.keras.initializers.HeUniform())(modelConcat)
 
         model = Model(inputs=[model1.input, model2.input, model3.input, model4.input, model5.input, model6.input, model7.input, model8.input, model9.input], outputs=[modelConcat])
@@ -202,7 +201,7 @@ class TensorMultitModelDbRepository(object):
         linear_part = error - quadratic_part
         loss = K.mean(0.5 * K.square(quadratic_part) + linear_part)
 
-        rms = RMSprop(lr=0.001, epsilon=0.01)
+        rms = RMSprop(lr=0.00005, epsilon=0.01)
         updates = rms.get_updates(loss, self.model.trainable_weights)
         train = K.function([self.model.input, a, y], [loss], updates=updates)
 

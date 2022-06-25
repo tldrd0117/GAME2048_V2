@@ -55,7 +55,7 @@ class TrainSaveDbMultiAiService(object):
                 print(str(self.tensorModelRepo.memorySize))
                 length = self.tensorModelRepo.memorySize
 
-            if self.tensorModelRepo.memorySize > 5000:
+            if self.tensorModelRepo.memorySize > 30000:
                 break
         # action, maxQ = self.selection(self.tableRepo.table, dirList, True)
         # if action == -1:
@@ -77,18 +77,51 @@ class TrainSaveDbMultiAiService(object):
         
         print("end")
         print(str(self.tensorModelRepo.memorySize))
-        self.tableRepo.printTable()
+        # self.tableRepo.printTable()
         averageScores = sum(self.scores) / len(self.scores) if len(self.scores) > 0 else 0
         averageTurns = sum(self.turns) / len(self.turns) if len(self.turns) > 0 else 0
 
         averageSimulateMaxQ = sum(self.simulateMaxQ) / len(self.simulateMaxQ) if len(self.simulateMaxQ) > 0 else 0
         unique2, count2 = np.unique(np.array(self.simulatePredictedActions), return_counts=True)
         simulateActions = dict(zip(unique2, count2))
+        print(str(averageTurns))
+        print(str(averageScores))
+        print(str(simulateActions))
+        print(f"{str(self.currentCount)}/{str(self.episodeCount)}")
 
         self.treeRepo.addGameInfo(averageTurns, averageScores, averageSimulateMaxQ, "TrainMultiAiServiceAverageLRChange", simulateActions, simulateCount + 1)
         # self.treeRepo.addGameInfo(self.gameRepo.turn, self.gameRepo.score, averageMaxQ, "TrainMultiAiServiceLRChange", actions, 1)
         return self.startDate, datetime.datetime.now()
     
+    def appendWrongAction(self, action, parentTable, dirList):
+        childNode = self.tensorModelRepo.newNode()
+        if action < 2:
+            childNode.action = action
+            childNode.parent = parentTable
+            childNode.score = (-0.1 * len(dirList)) if len(dirList) > 0 else -0.1
+            self.tensorModelRepo.appendSamples([childNode])
+        else:
+            childNode.action = action - 2
+            childNode.parent = self.tableRepo.getRotateTableCounterClockWise(parentTable)
+            childNode.score = (-0.1 * len(dirList)) if len(dirList) > 0 else -0.1
+            self.tensorModelRepo.appendSamples([childNode])
+    
+    def appendSuccessAction(self, action, parentTable, table, isReward, gameRepo: GameRepository):
+        if action < 2:
+            childNode = self.tensorModelRepo.getNode(table)
+            childNode.action = action
+            childNode.parent = parentTable
+            # childNode.rootScore = rootScore
+            childNode.score = (0.01 * gameRepo.turn) if isReward else 0.01
+            self.tensorModelRepo.appendSamples([childNode])
+        else:
+            childNode = self.tensorModelRepo.getNode(self.tableRepo.getRotateTableCounterClockWise(table))
+            childNode.action = action - 2
+            childNode.parent = self.tableRepo.getRotateTableCounterClockWise(parentTable)
+            # childNode.rootScore = rootScore
+            childNode.score = (0.01 * gameRepo.turn) if isReward else 0.01
+            self.tensorModelRepo.appendSamples([childNode])
+
 
     def simulate(self):
         tableRepo = TableRepository()
@@ -101,96 +134,26 @@ class TrainSaveDbMultiAiService(object):
             node = self.tensorModelRepo.getNode(tableRepo.getCopyTable())
             dirList = tableRepo.getPossibleDirList()
             # if len(dirList) > 0:
-            if random.random() < 0.5 + (self.currentCount / self.episodeCount)/2:
+            if random.random() < 0.5 + (self.currentCount / self.episodeCount)/2 and self.currentCount >= 10:
                 action, maxQ, isAction = self.selection(tableRepo.getCopyTable(), dirList)
                 if isAction == False:
-                    childNode = self.tensorModelRepo.newNode()
-                    if action < 2:
-                        childNode.action = action
-                        childNode.parent = node.table
-                        childNode.score = -0.1
-                        self.tensorModelRepo.appendSamples([childNode])
-                    else:
-                        childNode.action = action - 2
-                        childNode.parent = self.tableRepo.getRotateTableCounterClockWise(tableRepo.getCopyTable())
-                        childNode.score = -0.1
-                        self.tensorModelRepo.appendSamples([childNode])
-
+                    self.appendWrongAction(action, tableRepo.getCopyTable(), dirList)
                     break
                 data = tableRepo.moveTable(action)
                 simulateMaxQ.append(maxQ)
             else:
                 action = random.randrange(0,4)
                 if action not in dirList:
-                    childNode = self.tensorModelRepo.newNode()
-                    if action < 2:
-                        childNode.action = action
-                        childNode.parent = node.table
-                        childNode.score = -0.1
-                        self.tensorModelRepo.appendSamples([childNode])
-                    else:
-                        childNode.action = action - 2
-                        childNode.parent = self.tableRepo.getRotateTableCounterClockWise(tableRepo.getCopyTable())
-                        childNode.score = -0.1
-                        self.tensorModelRepo.appendSamples([childNode])
+                    self.appendWrongAction(action, tableRepo.getCopyTable(), dirList)
                     break
-                
                 data = tableRepo.moveTable(action)
             if not data[0]:
-                print(tableRepo.table)
-                print(action)
                 print("same move")
-                node.print()
                 break
 
             gameRepo.nextTurn(data[1])
             tableRepo.genRandom()
-                
-            if action < 2:
-                childNode = self.tensorModelRepo.getNode(tableRepo.getCopyTable())
-                childNode.action = action
-                childNode.parent = node.table
-                # childNode.rootScore = rootScore
-                childNode.score = (0.01 * gameRepo.turn) if data[1] > 0 else 0.01
-
-                self.tensorModelRepo.appendSamples([childNode])
-            else:
-                childNode = self.tensorModelRepo.getNode(self.tableRepo.getRotateTableCounterClockWise(tableRepo.getCopyTable()))
-                childNode.action = action - 2
-                childNode.parent = self.tableRepo.getRotateTableCounterClockWise(node.table)
-                # childNode.rootScore = rootScore
-                childNode.score = (0.01 * gameRepo.turn )if data[1] > 0 else 0.01
-
-                self.tensorModelRepo.appendSamples([childNode])
-
-
-                # isDup = False
-                # for d in node.childs:
-                #     if str(childNode.table) == str(d[0]):
-                #         isDup = True
-                # if not isDup:
-                #     node.childs.append([childNode.table, action])
-                # childNode.parent = node.table
-                # self.tensorModelRepo.updateNodes(node)
-                # self.tensorModelRepo.updateNodes(childNode)
-
-            # 불가능한 액션은 최종보상을 0으로 세팅
-            # if len(dirList) < 4:
-            #     li = [Direction.LEFT, Direction.RIGHT, Direction.UP, Direction.DOWN]
-            #     impossibleAction = []
-            #     for dir in li:
-            #         if dir not in dirList:
-            #             impossibleAction.append(dir)
-            #     for action in impossibleAction:
-            #         newNode = self.tensorModelRepo.newNode()
-            #         newNode.action = action
-            #         # childNode.rootScore = rootScore
-            #         newNode.score = 0
-            #         newNode.parent = node.table
-            #         self.tensorModelRepo.appendSamples([newNode])
-            # if len(dirList) <= 0:
-            #     break
-        # self.backPropagation(tableRepo.table, gameRepo.score)
+            self.appendSuccessAction(action, node.table, tableRepo.getCopyTable(), data[1]>0, gameRepo)
         self.turns.append(gameRepo.turn)
         self.scores.append(gameRepo.score)
         self.simulateMaxQ = self.simulateMaxQ + simulateMaxQ
@@ -219,18 +182,3 @@ class TrainSaveDbMultiAiService(object):
         #         action = a
         #         break
         # return action, maxQ
-
-
-    def backPropagation(self, table: List, score: int):
-        nodeList = []
-        node: TableNode = self.tensorModelRepo.getExistNode(str(table))
-        while True:
-            nodeList.append(node)
-            # node.visit = node.visit + 1
-            # node.scores.append(score)
-            if node.parent is None:
-                break
-            node = self.tensorModelRepo.getExistNode(str(node.parent))
-        self.tensorModelRepo.appendSamples(nodeList)
-        self.tensorModelRepo.resetNodes()
-

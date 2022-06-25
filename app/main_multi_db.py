@@ -33,7 +33,7 @@ def train(dates):
     tensor.loadModel()
     tensor.updateMemoryFromDb(startDate, endDate)
     
-    trainCount = int(len(tensor.memory) / (tensor.batch_size ) )
+    trainCount = int(len(tensor.memory) / (tensor.batch_size ) / 4 )
     print(len(tensor.memory))
     for i in range(trainCount):
         print(f"train: {i}")
@@ -66,7 +66,7 @@ def train_old(dates):
     if len(tensor.memory) < 400000:
         return
     
-    trainCount = int(len(tensor.memory) / (tensor.batch_size * 2) )
+    trainCount = int(len(tensor.memory) / (tensor.batch_size * 4) )
     print(len(tensor.memory))
     for i in range(trainCount):
         print(f"train: {i}")
@@ -87,8 +87,8 @@ if __name__=='__main__':
     # freeze_support()
     start = int(time.time())
     procs = []
-    processCount = 5
-    episodeCount = 100
+    processCount = 4
+    episodeCount = 500
     weight = None
     for i in range(0,episodeCount):
         with Pool(processes=processCount) as p:
