@@ -72,7 +72,7 @@ class TrainTestService(object):
         actions = dict(zip(unique1, count1))
 
         self.treeRepo.addGameInfo(averageTurns, averageScore, averageMaxQ, "TrainMultiAiServiceLRChange", actions, gameCount)
-        return self.startDate, datetime.datetime.now()
+        return averageTurns
 
 
     def selection(self, table: List, dirList, isMain=False):

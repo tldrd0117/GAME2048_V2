@@ -141,8 +141,8 @@ class MongoDataSource(object):
         start = int(time.time())
         print("***find start")
         cursor = self.samples.find({
-            "action": action, 
-            "reward": reward ,
+            "action": action,
+            "reward": reward,
             "createdAt": { "$lte": startDate }
         })
         sample = random.sample(list(cursor), size)

@@ -62,6 +62,8 @@ class TableRepository(object):
             else:
                 num = random.randrange(0,11)
                 self.table[coord[0]][coord[1]] = 2 if num < 10 else 4
+            return True
+        return False
     
     def copyTable(self, table: List):
         return [item[:] for item in table]

@@ -7,7 +7,8 @@ from service.RandomAiService import RandomAiService
 from service.MCTSAiService import MCTSAiService
 from service.MCTSRunAiService import MCTSRunAiService
 from service.TrainAiService import TrainAiService
-from service.TrainSaveDbMultiAiNoRunService import TrainSaveDbMultiAiService
+# from service.TrainSaveDbMultiAiNoRunService import TrainSaveDbMultiAiService
+from service.TrainSaveDbMultiAiNoRunNoRandomService import TrainSaveDbMultiAiService
 from service.TrainTestService import TrainTestService
 from repo.tensor_multi_db import TensorMultitModelDbRepository
 import sys
@@ -17,11 +18,12 @@ import time
 import tensorflow as tf
 import tracemalloc
 import datetime
+import random
 
 sys.setrecursionlimit(10000)
 
 def work(d):
-    ai = TrainSaveDbMultiAiService(d[0],d[1])
+    ai = TrainSaveDbMultiAiService(d[0],d[1], d[2])
     return ai.run()
 
 def train(dates):
@@ -33,7 +35,7 @@ def train(dates):
     tensor.loadModel()
     tensor.updateMemoryFromDb(startDate, endDate)
     
-    trainCount = int(len(tensor.memory) / (tensor.batch_size ) / 4 )
+    trainCount = int(len(tensor.memory) / (tensor.batch_size ) / 2 )
     print(len(tensor.memory))
     for i in range(trainCount):
         print(f"train: {i}")
@@ -88,18 +90,35 @@ if __name__=='__main__':
     start = int(time.time())
     procs = []
     processCount = 4
-    episodeCount = 500
+    episodeCount = 100
     weight = None
+    predictPercent = 0.5
+    targetPredictPercent = predictPercent
+    maxTurn = 0
     for i in range(0,episodeCount):
         with Pool(processes=processCount) as p:
-            p.map(test, [None])
-            result = p.map_async(work, [(episodeCount,i)]*processCount)
+            turns = p.map(test, [None])
+            turn = turns[0]
+            if maxTurn < turn:
+                maxTurn = turn
+                if targetPredictPercent >= 0.2 and targetPredictPercent <=0.8:
+                    predictPercent = targetPredictPercent
+                print(f"{str(maxTurn)} {str(predictPercent)}")
+            value = random.random()
+            if value < 0.33:
+                targetPredictPercent = predictPercent - 0.1
+            elif value > 0.66:
+                targetPredictPercent = predictPercent + 0.1
+            # if i <= 10:
+            #     targetPredictPercent = 0
+            result = p.map_async(work, [(episodeCount,i, targetPredictPercent)]*processCount)
             try:
                 dates = result.get(timeout=4800)
             except multiprocessing.TimeoutError:
                 p.terminate()
                 p.join()
                 continue
+            
             print(len(dates))
             result = deque([])
             d = calDate(dates)

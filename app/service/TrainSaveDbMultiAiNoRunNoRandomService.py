@@ -12,10 +12,11 @@ import sys
 import datetime
 import time
 import traceback
+import os
 
 
 class TrainSaveDbMultiAiService(object):
-    def __init__(self, episodeCount, currentCount) -> None:
+    def __init__(self, episodeCount, currentCount, predictPercent) -> None:
         self.tableRepo = TableRepository()
         self.gameRepo = GameRepository()
         self.treeRepo = TreeDbRepository()
@@ -29,6 +30,7 @@ class TrainSaveDbMultiAiService(object):
         self.scores = []
         self.episodeCount = episodeCount
         self.currentCount = currentCount
+        self.predictPercent = predictPercent
 
 
     def averageList(li):
@@ -48,7 +50,10 @@ class TrainSaveDbMultiAiService(object):
             # if len(dirList) <= 0:
             #     break
             self.tableRepo.genRandom()
-            self.tableRepo.printTable()
+            print(f"pid: {str(os.getpid())}")
+            print(f"episodeCount: {str(self.episodeCount)}")
+            print(f"currentCount: {str(self.currentCount)}")
+            print(f"predictPercent: {str(self.predictPercent)}")
             length = 0
             while True:
                 simulateCount = simulateCount + 1
@@ -139,7 +144,7 @@ class TrainSaveDbMultiAiService(object):
             node = self.tensorModelRepo.getNode(tableRepo.getCopyTable())
             dirList = tableRepo.getPossibleDirList()
             # if len(dirList) > 0:
-            if random.random() < 0.5 + (self.currentCount / self.episodeCount)/2 and self.currentCount >= 10:
+            if random.random() < self.predictPercent:
                 action, maxQ, isAction = self.selection(tableRepo.getCopyTable(), dirList)
                 if isAction == False:
                     self.appendWrongAction(action, tableRepo.getCopyTable(), dirList)
