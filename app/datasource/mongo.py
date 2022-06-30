@@ -36,6 +36,9 @@ class MongoDataSource(object):
 
         self.weights: Collection = self.client["game2048"]["weights"]
         self.weights.create_index([("createdAt", DESCENDING)], unique=True, name="weightIndex")
+
+        self.episodes: Collection = self.client["game2048"]["episodes"]
+        self.episodes.create_index([("createdAt", DESCENDING)], unique=False, name="episodeIndexDate")
             
     
     def updateNodes(self, node: "TableNode"):
@@ -190,10 +193,35 @@ class MongoDataSource(object):
             return pickle.loads(self.weightsFs.get(fileId).read())
         return None
     
+    def getLastWeightByName(self, modelName):
+        cursor = self.weights.find()
+        if len(list(cursor)) > 0:
+            c = self.weights.find({
+                "name": modelName
+            }).sort([('createdAt', -1)]).limit(1)
+            fileId = list(c)[0]["dataId"]
+            return pickle.loads(self.weightsFs.get(fileId).read())
+        return None
+    
     def getLosses(self):
         return self.weights.find({},{"createdAt":1, "loss":1, "name":1})
-
-
-
-
-
+    
+    def updateEpisodeData(self, action_probs, values, rewards, turn, score):
+        self.episodes.insert_one({
+            "action_probs": pickle.dumps(action_probs),
+            "values": pickle.dumps(values),
+            "rewards": pickle.dumps(rewards),
+            "turn": turn,
+            "score": score,
+            "createdAt": datetime.datetime.now()
+        })
+    
+    def getEpisodesBetween(self, startDate, endDate):
+        cursor = self.episodes.find({ \
+            "createdAt": {
+                "$gte": startDate,
+                "$lte": endDate
+            }
+        })
+        return list(map(lambda d : (pickle.loads(d["action_probs"]), pickle.loads(d["values"]), pickle.loads(d["rewards"]), d["turn"], d["score"]), list(cursor)))
+  

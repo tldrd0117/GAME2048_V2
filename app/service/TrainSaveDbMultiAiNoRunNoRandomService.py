@@ -63,7 +63,7 @@ class TrainSaveDbMultiAiService(object):
                     print(str(self.tensorModelRepo.memorySize))
                     length = self.tensorModelRepo.memorySize
 
-                if self.tensorModelRepo.memorySize > 5000:
+                if self.tensorModelRepo.memorySize > 7000:
                     break
             # action, maxQ = self.selection(self.tableRepo.table, dirList, True)
             # if action == -1:

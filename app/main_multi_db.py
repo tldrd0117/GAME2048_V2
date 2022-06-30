@@ -89,10 +89,10 @@ if __name__=='__main__':
     # freeze_support()
     start = int(time.time())
     procs = []
-    processCount = 4
+    processCount = 3
     episodeCount = 100
     weight = None
-    predictPercent = 0.5
+    predictPercent = 0.4
     targetPredictPercent = predictPercent
     maxTurn = 0
     for i in range(0,episodeCount):
@@ -102,13 +102,18 @@ if __name__=='__main__':
             if maxTurn < turn:
                 maxTurn = turn
                 if targetPredictPercent >= 0.2 and targetPredictPercent <=0.8:
-                    predictPercent = targetPredictPercent
+                    predictPercent = targetPredictPercent + 0.1
+                elif targetPredictPercent < 0.2:
+                    predictPercent = 0.2
+                elif targetPredictPercent > 0.8:
+                    predictPercent = 0.8
                 print(f"{str(maxTurn)} {str(predictPercent)}")
-            value = random.random()
-            if value < 0.33:
-                targetPredictPercent = predictPercent - 0.1
-            elif value > 0.66:
-                targetPredictPercent = predictPercent + 0.1
+                targetPredictPercent = predictPercent
+            else:
+                value = random.random()
+                targetPredictPercent = predictPercent * value
+            if targetPredictPercent < 0.2:
+                targetPredictPercent = 0.2
             # if i <= 10:
             #     targetPredictPercent = 0
             result = p.map_async(work, [(episodeCount,i, targetPredictPercent)]*processCount)
