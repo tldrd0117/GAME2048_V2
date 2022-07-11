@@ -1,3 +1,4 @@
+from datetime import datetime
 from statistics import mean
 from repo.actor_critic import ActorCriticRepository
 
@@ -8,6 +9,36 @@ class ActorCriticTrainService(object):
     #     self.actorCritic = ActorCriticRepository()
     def __init__(self) -> None:
         self.actorCritic = ActorCriticRepository()
+    
+    def getMinMaxDates(self, dates):
+        minDates = datetime.max
+        maxDates = datetime.min
+        for date in dates:
+            for one in date:
+                if one < minDates:
+                    minDates = one
+                if one > maxDates:
+                    maxDates = one
+        return minDates, maxDates
+    
+
+    def run(self, dates) -> None:
+        self.actorCritic.loadModel()
+        startDate, endDate = self.getMinMaxDates(dates)
+        print(f"startDate:{str(startDate)} endDate:{str(endDate)}")
+        li = self.actorCritic.getGradientsBetween(startDate, endDate)
+        actorLosses = []
+        criticLosses = []
+        for item in li:
+            name, grads, loss = item
+            if name == "actor":
+                actorLosses.append(loss)
+            elif name == "critic":
+                criticLosses.append(loss)
+            self.actorCritic.applyGrads(name, grads)
+            print(f"applyGrads: {str(loss)} ({name})")
+        self.actorCritic.saveModel(mean(actorLosses), mean(criticLosses))
+
     
     def loadModel(self):
         self.actorCritic.loadModel()

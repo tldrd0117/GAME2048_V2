@@ -24,6 +24,7 @@ class MongoDataSource(object):
 
         self.gridFs = self.client["gridFs"]
         self.weightsFs = gridfs.GridFS(self.gridFs, "weightsFs")
+        self.gradsFs = gridfs.GridFS(self.gridFs, "gradsFs")
 
         self.nodes: Collection = self.client["game2048"]["nodes"]
         self.nodes.create_index([("key", ASCENDING)], unique=True, name="nodeIndex")
@@ -39,6 +40,9 @@ class MongoDataSource(object):
 
         self.episodes: Collection = self.client["game2048"]["episodes"]
         self.episodes.create_index([("createdAt", DESCENDING)], unique=False, name="episodeIndexDate")
+
+        self.gradients: Collection = self.client["game2048"]["gradients"]
+        self.gradients.create_index([("createdAt", DESCENDING)], unique=False, name="gradientsIndexDate")
             
     
     def updateNodes(self, node: "TableNode"):
@@ -59,10 +63,11 @@ class MongoDataSource(object):
             return cursor["data"]
         return None
     
-    def addGameInfo(self, turn, score, averageMaxQ, serviceName, actionDicts, gameCount):
+    def addGameInfo(self, turn, score, reward, averageMaxQ, serviceName, actionDicts, gameCount):
         self.gameinfo.insert_one({
             "turn": turn,
             "score": score,
+            "reward": reward,
             "maxQ": averageMaxQ,
             "serviceName": serviceName,
             "createdAt": datetime.datetime.now(),
@@ -224,4 +229,31 @@ class MongoDataSource(object):
             }
         })
         return list(map(lambda d : (pickle.loads(d["action_probs"]), pickle.loads(d["values"]), pickle.loads(d["rewards"]), d["turn"], d["score"]), list(cursor)))
-  
+    
+    def insertGradients(self, name, grads, losses):
+        gradsData = pickle.dumps(grads)
+        id = self.gradsFs.put(gradsData)
+        self.gradients.insert_one({
+            "name": name,
+            "gradientsId": id,
+            "losses": pickle.dumps(losses),
+            "createdAt": datetime.datetime.now()
+        })
+    
+    def getGradientsBetween(self, startDate, endDate):
+        cursor = self.gradients.find({ \
+            "createdAt": {
+                "$gte": startDate,
+                "$lte": endDate
+            }
+        })
+        results = []
+        for data in cursor:
+            grads = pickle.loads(self.gradsFs.get(data["gradientsId"]).read())
+            losses = pickle.loads(data["losses"])
+            results.append((data["name"], grads, losses))
+            self.gradsFs.delete(data["gradientsId"])
+        return results
+        
+    
+
